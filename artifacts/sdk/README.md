@@ -1,6 +1,6 @@
 # Pinned SDK consumer artifact
 
-The adjacent `.crate` is an immutable source package produced by
+The selected `.crate` is an immutable source package produced by
 [`tsumugi-plugin-sdk` in Tsumugi](https://github.com/Anpimi/Tsumugi),
 version `0.1.0-alpha.1`, under its declared MIT license. `sdk.lock.json` records
 its SHA-256, producer repository and exact source commit. The source commit is a
@@ -14,3 +14,11 @@ producer repository and independently verify its bytes and public contents befor
 updating the lock. This repository releases domain plugins separately from SDK
 and application versions. Third-party registry dependencies are fetched through
 Cargo with the checked-in lockfile; their source is not included in this archive.
+
+New development snapshots use `<producer-commit>/<package>-<version>.crate`.
+Earlier archives remain unchanged for provenance; `sdk.lock.json` selects exactly
+one snapshot and there is no compatibility fallback. Preparation hashes and
+extracts the same captured archive bytes, verifies an existing cache, and refuses
+unmatched files. The current snapshot includes the Rust source-extraction API,
+generated JavaScript content declarations, standalone extraction validator and
+their license notices. Packaged plugins derive those helpers from this artifact.

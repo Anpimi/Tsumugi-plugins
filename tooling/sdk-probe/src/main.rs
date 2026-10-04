@@ -48,4 +48,49 @@ mod tests {
             ContractErrorCode::InvalidSchema
         );
     }
+
+    #[test]
+    fn standalone_source_contract_keeps_the_exact_captured_artifact_basis() {
+        use tsumugi_plugin_sdk::{
+            CapturedTextArtifact, ContentExchange, ContractRef, SourceExtractionInput,
+            payload_digest, validate_source_extraction,
+        };
+        let input = SourceExtractionInput {
+            profile: ContractRef {
+                id: "example.text".into(),
+                schema_version: 1,
+                behavior_version: 1,
+            },
+            source_set_id: "captured-source".into(),
+            source_language: "en-US".into(),
+            artifacts: vec![CapturedTextArtifact {
+                id: "captured-file".into(),
+                logical_path: "source.txt".into(),
+                role: "source".into(),
+                sha256: payload_digest("\u{feff}中文 👩🏽‍💻\r\n"),
+                utf8: "\u{feff}中文 👩🏽‍💻\r\n".into(),
+            }],
+        };
+        // Empty domain interpretation exercises data association only; this
+        // probe cannot approve extraction completeness or project adoption.
+        let mut proposal = ContentExchange {
+            profile: input.profile.clone(),
+            source_set_id: input.source_set_id.clone(),
+            source_language: input.source_language.clone(),
+            artifacts: input.artifacts.clone(),
+            units: vec![],
+            order: vec![],
+            relations: vec![],
+            domain_blocks: vec![],
+        };
+        validate_source_extraction(&input, &proposal).unwrap();
+        proposal.artifacts[0].utf8.push('\n');
+        proposal.artifacts[0].sha256 = payload_digest(&proposal.artifacts[0].utf8);
+        assert_eq!(
+            validate_source_extraction(&input, &proposal)
+                .unwrap_err()
+                .code,
+            ContractErrorCode::ResultMismatch
+        );
+    }
 }

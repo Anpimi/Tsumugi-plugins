@@ -1,0 +1,32 @@
+{
+  "formatVersion": 1,
+  "files": [
+    "manifest.json",
+    "components/component.mjs",
+    "components/webvtt.mjs",
+    "schemas/cue-basis.schema.json",
+    "schemas/locale-build-input.schema.json",
+    "schemas/locale-build-output.schema.json",
+    "schemas/artifact-check-input.schema.json",
+    "schemas/artifact-check-output.schema.json",
+    "schemas/operation-error.schema.json",
+    "docs/contracts.md",
+    "LICENSE",
+    "PROVENANCE.md",
+    "README.md",
+    "CHANGELOG.md",
+    "CHANGELOG.zh-CN.md",
+    "package.json",
+    "package-files.json"
+  ],
+  "sdkFiles": [
+    {
+      "source": "javascript/validate-source-extraction-input.mjs",
+      "target": "sdk/validate-source-extraction-input.mjs"
+    },
+    {
+      "source": "LICENSE",
+      "target": "sdk/LICENSE"
+    }
+  ]
+}

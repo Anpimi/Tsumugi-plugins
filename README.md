@@ -5,10 +5,11 @@ This repository owns domain implementations, their tests and independently
 versioned artifacts. Tsumugi owns the public SDK, process Host and project engine.
 Plugins do not depend on Core, the desktop frontend or a private workspace.
 
-The repository currently provides a pinned SDK source artifact and an independent
-Rust consumer check. The SMAPI and WebVTT directories identify their migration
-boundaries; they do not yet contain runnable domain packages. No plugin release
-or complete desktop workflow is claimed by this initial repository.
+The repository provides a pinned SDK source artifact, an independent Rust consumer
+check, and a runnable WebVTT JavaScript package for extraction, locale building
+and artifact checking. SMAPI migration remains pending. The WebVTT package is an
+experimental candidate; desktop selection, project adoption and the full domain
+cutover remain application integration work. No plugin release is claimed.
 
 ## Build the independent SDK consumer
 
@@ -33,6 +34,31 @@ Changes to SDK contracts belong in Tsumugi and require a new explicitly selected
 artifact here. The archive contains the public contract/schema harness and
 JavaScript declarations as well as the Rust data API.
 
+Development snapshots are stored under `artifacts/sdk/<producer-commit>/` so an
+explicitly selected newer snapshot never replaces an earlier archive's bytes.
+Before changing that selection, verify an existing cache against the old lock and
+preserve it outside the selected package directory. A mismatched cache is refused.
+
+## Build a WebVTT package
+
+Use Node `>=26.10.0 <27` for this package. From this checkout:
+
+```sh
+node --test plugins/webvtt/tests/*.test.mjs
+mkdir -p artifacts/candidates
+python3 tooling/package-plugin.py plugins/webvtt artifacts/candidates/webvtt-0.1.0-alpha.1
+tsumugi-plugin-package inspect artifacts/candidates/webvtt-0.1.0-alpha.1
+```
+
+`tsumugi-plugin-package` is the public Host inspector supplied by Tsumugi. The
+packager copies the explicit file recipe, SDK-generated extraction validator,
+licenses and SDK lock into a new directory. It refuses an existing output and
+executes no package scripts. The inspector validates and fingerprints that actual
+prebuilt candidate; its output supplies no publisher authentication or execution
+grant. Keep approval, installation and current execution consent separate.
+See the [package contracts](plugins/webvtt/docs/contracts.md) and
+[Host boundary](plugins/webvtt/README.md#host-integration-boundary).
+
 ## Package ownership
 
 - `plugins/stardew-smapi/`: SMAPI discovery, source and translation import,
@@ -41,7 +67,7 @@ JavaScript declarations as well as the Rust data API.
   payload checks and preservation of non-payload bytes in output.
 - `tooling/`: public SDK consumption and shared build checks.
 
-Each domain package will own its version and changelog. There is no repository
+Each domain package owns its version and changelog. There is no repository
 version train. Installing a package will not authorize its execution or adopt
 its results; those decisions belong to the application's trusted boundaries.
 

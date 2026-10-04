@@ -2,10 +2,12 @@
 """Materialize the exact public SDK artifact selected by sdk.lock.json."""
 
 import hashlib
+import io
 import json
 import os
 from pathlib import Path, PurePosixPath
 import shutil
+import stat
 import sys
 import tarfile
 import tempfile
@@ -19,17 +21,39 @@ def prepare(root: Path) -> Path:
     if "/" in package or "\\" in package or package in {".", ".."}:
         raise ValueError("invalid SDK package identity")
     archive_path = PurePosixPath(lock["archive"])
-    if archive_path.parts != ("artifacts", "sdk", f"{package}.crate"):
+    source_commit = lock["sourceCommit"]
+    if (not isinstance(source_commit, str) or len(source_commit) != 40
+            or any(character not in "0123456789abcdef" for character in source_commit)):
+        raise ValueError("invalid SDK producer commit")
+    # Explicit development snapshots retain their original immutable archives.
+    # This is a source provenance selector, not an SDK compatibility fallback.
+    canonical = ("artifacts", "sdk", source_commit, f"{package}.crate")
+    if archive_path.parts != canonical:
         raise ValueError("invalid SDK archive path")
     archive = root.joinpath(*archive_path.parts)
     if not archive.is_file() or archive.is_symlink() or archive.stat().st_size > 4 * 1024 * 1024:
         raise ValueError("SDK archive is missing or exceeds its limit")
-    if hashlib.sha256(archive.read_bytes()).hexdigest() != lock["sha256"]:
+    flags = os.O_RDONLY
+    if os.name == "posix":
+        flags |= os.O_NOFOLLOW | os.O_NONBLOCK
+    elif os.name == "nt":
+        flags |= os.O_BINARY
+    descriptor = os.open(archive, flags)
+    with os.fdopen(descriptor, "rb") as stream:
+        selected = os.fstat(stream.fileno())
+        if not stat.S_ISREG(selected.st_mode) or selected.st_size > 4 * 1024 * 1024:
+            raise ValueError("SDK archive is not a bounded ordinary file")
+        archive_bytes = stream.read(4 * 1024 * 1024 + 1)
+    if len(archive_bytes) > 4 * 1024 * 1024:
+        raise ValueError("SDK archive exceeds its limit")
+    if hashlib.sha256(archive_bytes).hexdigest() != lock["sha256"]:
         raise ValueError("SDK archive digest mismatch")
 
     files = {}
     total = 0
-    with tarfile.open(archive, "r:gz") as source:
+    # Extract the bytes whose digest was checked, rather than reopening a path
+    # that could select a different archive after verification.
+    with tarfile.open(fileobj=io.BytesIO(archive_bytes), mode="r:gz") as source:
         for member in source:
             path = PurePosixPath(member.name)
             if (not member.isfile() or not path.parts or path.parts[0] != package

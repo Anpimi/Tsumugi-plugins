@@ -12,9 +12,19 @@ verified SDK artifact. A local SDK override is a development choice, not a
 release dependency or a replacement for the pinned artifact.
 
 Each plugin uses its own SemVer and changelog. A shared-tool change must exercise
-all affected packages. The current SDK probe verifies declaration consumption;
-it does not prove a domain worker, semantic validation or an accepted application
-workflow. Releases need their actual package and Host integration evidence.
+all affected packages. The SDK probe verifies declaration and captured-source
+contract consumption. Domain tests use independent expected bytes; Host pairing
+must consume the actual prebuilt package with independently approved fingerprints,
+not load a source tree or infer a grant from installation. Neither probe nor domain
+tests establish an accepted desktop workflow.
+
+Run `python3 -m unittest discover -s tooling/tests` for public preparation and
+packaging checks. Package runtime files through `tooling/package-plugin.py` and
+the explicit `package-files.json` recipe. Generated SDK helpers must come from the
+selected verified archive with their licenses and lock, never a hand-edited copy.
+Retain older SDK archives and pin replacements by producer commit. Keep candidate
+build directories out of Git; each domain keeps its initial `0.1.0-alpha.1` version
+until an actual release boundary requires a version decision.
 
 Do not add installation scripts, automatic source builds at runtime or silent
 fallback to a different plugin. Keep credentials, user project data and internal

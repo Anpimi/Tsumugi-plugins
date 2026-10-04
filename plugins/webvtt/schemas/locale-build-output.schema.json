@@ -1,0 +1,54 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:tsumugi:webvtt:locale-build-output:1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "version",
+    "locale",
+    "logicalPath",
+    "sha256",
+    "utf8",
+    "cueCount",
+    "builderVersion"
+  ],
+  "properties": {
+    "version": {
+      "type": "integer",
+      "const": 1
+    },
+    "locale": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128,
+      "pattern": "^[A-Za-z0-9-]+$"
+    },
+    "logicalPath": {
+      "type": "string",
+      "minLength": 5,
+      "maxLength": 84,
+      "pattern": "^(?!(?:[sS][oO][uU][rR][cC][eE]|[cC][oO][nN]|[pP][rR][nN]|[aA][uU][xX]|[nN][uU][lL]|[cC][oO][mM][0-9]|[lL][pP][tT][0-9])\\.vtt$)[A-Za-z0-9_-]{1,80}\\.vtt$",
+      "description": "A root-level caption filename; directory components and reserved device/source names are rejected."
+    },
+    "sha256": {
+      "type": "string",
+      "minLength": 64,
+      "maxLength": 64,
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "utf8": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 131072
+    },
+    "cueCount": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 2000
+    },
+    "builderVersion": {
+      "type": "string",
+      "const": "webvtt-locale-build-1"
+    }
+  }
+}
