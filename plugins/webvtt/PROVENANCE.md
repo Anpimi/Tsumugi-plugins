@@ -23,6 +23,12 @@ IDs, revisions, user decisions, grants and release policies remain application
 responsibilities. This package does not claim a completed application migration
 or full WebVTT conformance.
 
+The fixed-source semantic verifier is a package-owned addition. It independently
+reparses captured material and checks complete proposal references, original ID
+display/ranges and exact required basis blocks through the SDK's standard check
+results. Its literal source-check fixture is an independently authored oracle;
+it does not use extractor output to define the expected source semantics.
+
 Shared component, invocation and content types come from the exact SDK artifact
 selected by the repository's `sdk.lock.json`. Generated SDK files and cached
 artifacts are not edited or vendored as another protocol source in this package.

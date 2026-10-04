@@ -25,6 +25,10 @@
       "target": "sdk/validate-source-extraction-input.mjs"
     },
     {
+      "source": "javascript/validate-source-extraction-check-input.mjs",
+      "target": "sdk/validate-source-extraction-check-input.mjs"
+    },
+    {
       "source": "LICENSE",
       "target": "sdk/LICENSE"
     }

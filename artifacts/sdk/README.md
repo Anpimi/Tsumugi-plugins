@@ -20,5 +20,6 @@ Earlier archives remain unchanged for provenance; `sdk.lock.json` selects exactl
 one snapshot and there is no compatibility fallback. Preparation hashes and
 extracts the same captured archive bytes, verifies an existing cache, and refuses
 unmatched files. The current snapshot includes the Rust source-extraction API,
-generated JavaScript content declarations, standalone extraction validator and
-their license notices. Packaged plugins derive those helpers from this artifact.
+generated JavaScript content declarations, standalone extraction and source-check
+validators, original identity display evidence and fixed check-selection contracts,
+with their license notices. Packaged plugins derive those helpers from this artifact.

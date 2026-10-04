@@ -42,7 +42,7 @@
           },
           "outputSchema": {
             "id": "tsumugi.content-exchange",
-            "schemaVersion": 1,
+            "schemaVersion": 2,
             "behaviorVersion": 1
           },
           "errorSchema": {
@@ -65,6 +65,54 @@
           ],
           "limits": {
             "maxInputBytes": 2097152,
+            "maxOutputBytes": 2097152,
+            "concurrency": 1,
+            "timeoutMs": 30000
+          }
+        }
+      }
+    },
+    {
+      "id": "source-semantic-check",
+      "componentId": "caption-worker",
+      "contribution": {
+        "kind": "capability",
+        "declaration": {
+          "contract": {
+            "id": "webvtt.source-check",
+            "schemaVersion": 1,
+            "behaviorVersion": 1
+          },
+          "inputSchema": {
+            "id": "tsumugi.source-extraction-check-input",
+            "schemaVersion": 1,
+            "behaviorVersion": 1
+          },
+          "outputSchema": {
+            "id": "tsumugi.check-results",
+            "schemaVersion": 1,
+            "behaviorVersion": 1
+          },
+          "errorSchema": {
+            "id": "tsumugi.source-extraction-error",
+            "schemaVersion": 1,
+            "behaviorVersion": 1
+          },
+          "profiles": [
+            {
+              "id": "webvtt-captions",
+              "schemaVersion": 1,
+              "behaviorVersion": 1
+            }
+          ],
+          "effect": "read-only",
+          "permissions": [
+            {
+              "kind": "captured-input"
+            }
+          ],
+          "limits": {
+            "maxInputBytes": 4194304,
             "maxOutputBytes": 2097152,
             "concurrency": 1,
             "timeoutMs": 30000

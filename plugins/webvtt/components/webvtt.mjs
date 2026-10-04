@@ -4,11 +4,13 @@ import { createHash } from 'node:crypto';
 
 /** @typedef {import('../../../.cache/sdk/tsumugi-plugin-sdk-0.1.0-alpha.1/javascript/content.js').SourceExtractionInput} SourceExtractionInput */
 /** @typedef {import('../../../.cache/sdk/tsumugi-plugin-sdk-0.1.0-alpha.1/javascript/content.js').ContentExchange} ContentExchange */
+/** @typedef {import('../../../.cache/sdk/tsumugi-plugin-sdk-0.1.0-alpha.1/javascript/content.js').SourceExtractionCheckInput} SourceExtractionCheckInput */
 
 export const MAX_SOURCE_BYTES = 128 * 1024;
 export const MAX_CUES = 2000;
 export const MAX_TEXT_BYTES = 16 * 1024;
 export const MAX_PAYLOAD_BYTES = 2 * 1024 * 1024;
+export const MAX_SOURCE_CHECK_BYTES = 4 * 1024 * 1024;
 export const PROFILE = Object.freeze({ id: 'webvtt-captions', schemaVersion: 1, behaviorVersion: 1 });
 export const BUILDER_VERSION = 'webvtt-locale-build-1';
 export const CHECKER_VERSION = 'webvtt-locale-artifact-1';
@@ -205,7 +207,8 @@ export function parseCaptions(raw, signal) {
     const payload = bytes.subarray(start, end).toString('utf8');
     if (!validPayload(payload)) reject('unsupported-structure', 'Unsupported or empty caption payload.');
     if (cues.length >= MAX_CUES) reject('limit-exceeded', 'Caption source exceeds 2000 cues.');
-    cues.push({ ordinal: cues.length, nativeId, canonicalId, start, end, sourceText: normalize(payload),
+    cues.push({ ordinal: cues.length, nativeId, canonicalId, idStart: block[0].start, idEnd: block[0].end,
+      start, end, sourceText: normalize(payload),
       basis: { version: 1, policy: POLICY, nativeId, timing: block[1].text, settings: parsed.settings, layoutDigest } });
   }
   if (cues.length === 0) reject('invalid-source', 'Caption source has no cues.');
@@ -213,9 +216,7 @@ export function parseCaptions(raw, signal) {
   return { cues, bytes, newline: raw.includes('\r\n') ? '\r\n' : raw.includes('\r') ? '\r' : '\n' };
 }
 
-/** Domain checks after the SDK-generated structural validator.
- * @param {SourceExtractionInput} input @returns {ContentExchange} */
-export function extractSource(input, signal) {
+function capturedSource(input, signal) {
   profile(input.profile);
   if (!opaque(input.sourceSetId) || !language(input.sourceLanguage) || !Array.isArray(input.artifacts) || input.artifacts.length !== 1) {
     reject('invalid-input', 'Expected one captured source artifact and valid operation metadata.');
@@ -223,7 +224,13 @@ export function extractSource(input, signal) {
   const artifact = input.artifacts[0];
   if (!opaque(artifact.id) || artifact.logicalPath !== 'source.vtt' || artifact.role !== 'source'
     || !digest(artifact.sha256) || sha256(scalar(artifact.utf8)) !== artifact.sha256) reject('invalid-input', 'Captured source binding mismatch.');
-  const parsed = parseCaptions(artifact.utf8, signal);
+  return { artifact, parsed: parseCaptions(artifact.utf8, signal) };
+}
+
+/** Domain checks after the SDK-generated structural validator.
+ * @param {SourceExtractionInput} input @returns {ContentExchange} */
+export function extractSource(input, signal) {
+  const { artifact, parsed } = capturedSource(input, signal);
   const result = { profile: { ...PROFILE }, sourceSetId: input.sourceSetId, sourceLanguage: input.sourceLanguage,
     artifacts: [{ ...artifact }], units: [], order: [], relations: [], domainBlocks: [] };
   for (const cue of parsed.cues) {
@@ -232,13 +239,116 @@ export function extractSource(input, signal) {
     const occurrence = `occurrence-${cue.ordinal}`;
     result.units.push({ id, sourceRevisionId: `source-${cue.ordinal}`, text: cue.sourceText,
       occurrences: [{ id: occurrence, source: { artifactId: artifact.id, range: { encoding: 'utf8-byte', start: cue.start, end: cue.end } },
-        nativeIdentity: { namespace: 'webvtt:source', value: cue.canonicalId, policy: contract('webvtt-cue') } }], protectedFragments: [] });
+        nativeIdentity: { namespace: 'webvtt:source', value: cue.canonicalId, policy: contract('webvtt-cue'),
+          display: { value: cue.nativeId, source: { artifactId: artifact.id,
+            range: { encoding: 'utf8-byte', start: cue.idStart, end: cue.idEnd } } } } }], protectedFragments: [] });
     result.order.push(occurrence);
     result.domainBlocks.push({ target: { kind: 'occurrence', id: occurrence }, schema: contract('webvtt.cue-basis'),
       handling: 'required', payloadUtf8: JSON.stringify(cue.basis) });
   }
   encoded(result);
   return result;
+}
+
+function exactContract(actual, id) {
+  return actual?.id === id && actual.schemaVersion === 1 && actual.behaviorVersion === 1;
+}
+function sourceRequirement(input) {
+  if (!Array.isArray(input.requirements) || input.requirements.length !== 1) {
+    reject('invalid-input', 'Expected exactly one fixed source semantic requirement.');
+  }
+  const requirement = input.requirements[0];
+  const provider = requirement.key?.implementation?.provider;
+  if (!exactContract(requirement.key?.rule, 'webvtt.source-semantics')
+    || requirement.key.implementation.kind !== 'plugin'
+    || provider?.plugin?.publisher !== 'org.tsumugi' || provider.plugin.id !== 'webvtt' || provider.plugin.version !== '0.1.0-alpha.1'
+    || provider.componentId !== 'caption-worker' || provider.contributionId !== 'source-semantic-check'
+    || !digest(provider.packageDigest) || !digest(requirement.inputDigest) || !digest(requirement.scopeDigest)
+    || requirement.mandatory !== true || requirement.waivable !== false || requirement.notApplicable !== null
+    || !Array.isArray(requirement.targets) || requirement.targets.length !== 1 || requirement.targets[0] !== input.source.sourceSetId) {
+    reject('invalid-input', 'Source semantic requirement does not match the fixed rule, provider or target.');
+  }
+  return requirement;
+}
+function exactRange(reference, artifactId, start, end) {
+  return reference?.artifactId === artifactId && reference.range?.encoding === 'utf8-byte'
+    && reference.range.start === start && reference.range.end === end;
+}
+function sourceAssociation(input, artifact) {
+  const proposal = input.proposal;
+  if (!exactContract(proposal.profile, PROFILE.id) || proposal.sourceSetId !== input.source.sourceSetId
+    || proposal.sourceLanguage !== input.source.sourceLanguage || proposal.artifacts.length !== 1) {
+    reject('invalid-input', 'Proposal does not belong to the captured source material.');
+  }
+  const proposedArtifact = proposal.artifacts[0];
+  if (proposedArtifact.id !== artifact.id || proposedArtifact.logicalPath !== artifact.logicalPath
+    || proposedArtifact.role !== artifact.role || proposedArtifact.sha256 !== artifact.sha256 || proposedArtifact.utf8 !== artifact.utf8) {
+    reject('invalid-input', 'Proposal artifact does not match the captured source material.');
+  }
+}
+function faithfulSourceProposal(input, artifact, parsed, signal) {
+  const proposal = input.proposal;
+  if (proposal.units.length !== parsed.cues.length || proposal.order.length !== parsed.cues.length
+    || proposal.relations.length !== 0 || proposal.domainBlocks.length !== parsed.cues.length) return false;
+  const unitIds = new Set();
+  const revisionIds = new Set();
+  const occurrences = new Map();
+  for (const unit of proposal.units) {
+    cancelled(signal);
+    if (!opaque(unit.id) || unitIds.has(unit.id) || !opaque(unit.sourceRevisionId) || revisionIds.has(unit.sourceRevisionId)
+      || unit.occurrences.length !== 1 || unit.protectedFragments.length !== 0) return false;
+    unitIds.add(unit.id);
+    revisionIds.add(unit.sourceRevisionId);
+    const occurrence = unit.occurrences[0];
+    if (!opaque(occurrence.id) || occurrences.has(occurrence.id)) return false;
+    occurrences.set(occurrence.id, { unit, occurrence });
+  }
+  const blocks = new Map();
+  for (const block of proposal.domainBlocks) {
+    cancelled(signal);
+    if (block.target.kind !== 'occurrence' || !occurrences.has(block.target.id) || blocks.has(block.target.id)
+      || !exactContract(block.schema, 'webvtt.cue-basis') || block.handling !== 'required') return false;
+    blocks.set(block.target.id, block.payloadUtf8);
+  }
+  const ordered = new Set();
+  for (const [index, cue] of parsed.cues.entries()) {
+    cancelled(signal);
+    const id = proposal.order[index];
+    const entry = occurrences.get(id);
+    if (!entry || ordered.has(id)) return false;
+    ordered.add(id);
+    const { unit, occurrence } = entry;
+    const identity = occurrence.nativeIdentity;
+    if (unit.text !== cue.sourceText || !exactRange(occurrence.source, artifact.id, cue.start, cue.end)
+      || identity?.namespace !== 'webvtt:source' || identity.value !== cue.canonicalId
+      || !exactContract(identity.policy, 'webvtt-cue') || identity.display?.value !== cue.nativeId
+      || !exactRange(identity.display.source, artifact.id, cue.idStart, cue.idEnd)
+      // Opaque basis bytes have one canonical encoding in this profile. Do not
+      // JSON.parse a forged duplicate field and silently discard its history.
+      || blocks.get(id) !== JSON.stringify(cue.basis)) return false;
+  }
+  return true;
+}
+
+/** Reparse fixed source and inspect the proposal's complete domain evidence.
+ * No producer result is used as an oracle and extractSource is never called.
+ * @param {SourceExtractionCheckInput} input */
+export function checkSourceSemantics(input, signal) {
+    cancelled(signal);
+    encoded(input, MAX_SOURCE_CHECK_BYTES);
+    encoded(input.source);
+    encoded(input.proposal);
+  const requirement = sourceRequirement(input);
+  const { artifact, parsed } = capturedSource(input.source, signal);
+  sourceAssociation(input, artifact);
+  const faithful = faithfulSourceProposal(input, artifact, parsed, signal);
+  cancelled(signal);
+  const results = [{ key: structuredClone(requirement.key), inputDigest: requirement.inputDigest,
+    scopeDigest: requirement.scopeDigest, coveredTargets: [...requirement.targets],
+    outcome: { kind: 'completed', findings: faithful ? []
+      : [{ code: 'source-mismatch', target: input.source.sourceSetId, severity: 'error' }] } }];
+  encoded(results);
+  return results;
 }
 
 export function safeOutputPath(value) {
@@ -344,8 +454,8 @@ export function checkArtifact(request, signal) {
   return result;
 }
 
-export function encoded(value) {
+export function encoded(value, limit = MAX_PAYLOAD_BYTES) {
   const utf8 = JSON.stringify(value);
-  if (Buffer.byteLength(utf8) > MAX_PAYLOAD_BYTES) reject('limit-exceeded', 'Encoded operation payload exceeds 2 MiB.');
+  if (Buffer.byteLength(utf8) > limit) reject('limit-exceeded', 'Encoded operation payload exceeds its captured byte limit.');
   return utf8;
 }

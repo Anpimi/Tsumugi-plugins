@@ -57,6 +57,11 @@ test('SDK content exchange retains original artifact, byte ranges and canonical 
     assert.equal(original.subarray(occurrence.source.range.start, occurrence.source.range.end).toString('utf8').replaceAll('\r\n', '\n'), unit.text);
     assert.equal(occurrence.nativeIdentity.value, ['keep', 'timed', 'word', 'layout', 'rename', 'removed'][index]);
     assert.deepEqual(occurrence.nativeIdentity.policy, { id: 'webvtt-cue', schemaVersion: 1, behaviorVersion: 1 });
+    const display = occurrence.nativeIdentity.display;
+    assert.equal(display.source.artifactId, request.artifacts[0].id);
+    assert.equal(display.source.range.encoding, 'utf8-byte');
+    assert.equal(original.subarray(display.source.range.start, display.source.range.end).toString('utf8'), display.value);
+    assert.equal(display.value, ['Keep', 'timed', 'word', 'layout', 'rename', 'removed'][index]);
     assert.equal(result.domainBlocks[index].handling, 'required');
     assert.equal(result.domainBlocks[index].target.id, occurrence.id);
     const basis = JSON.parse(result.domainBlocks[index].payloadUtf8);

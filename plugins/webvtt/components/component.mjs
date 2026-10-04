@@ -1,5 +1,6 @@
 import validateSourceExtractionInput from '../sdk/validate-source-extraction-input.mjs';
-import { WebvttError, MAX_PAYLOAD_BYTES, extractSource, buildCaptions, checkArtifact, encoded } from './webvtt.mjs';
+import validateSourceExtractionCheckInput from '../sdk/validate-source-extraction-check-input.mjs';
+import { WebvttError, MAX_PAYLOAD_BYTES, MAX_SOURCE_CHECK_BYTES, extractSource, checkSourceSemantics, buildCaptions, checkArtifact, encoded } from './webvtt.mjs';
 
 /** @typedef {import('../../../.cache/sdk/tsumugi-plugin-sdk-0.1.0-alpha.1/javascript/component.js').ComponentModule} ComponentModule */
 /** @typedef {import('../../../.cache/sdk/tsumugi-plugin-sdk-0.1.0-alpha.1/javascript/content.js').SourceExtractionError} SourceExtractionError */
@@ -8,6 +9,7 @@ const extractionCodes = new Set(['invalid-input', 'unsupported-profile', 'invali
 const operationCodes = new Set(['invalid-input', 'invalid-template', 'invalid-payload', 'identity-mismatch', 'invalid-output', 'unsafe-path', 'limit-exceeded', 'cancelled']);
 const operations = new Map([
   ['extract-source', { contract: 'webvtt.extract', input: 'tsumugi.source-extraction-input', handler: extractSource }],
+  ['source-semantic-check', { contract: 'webvtt.source-check', input: 'tsumugi.source-extraction-check-input', handler: checkSourceSemantics }],
   ['build', { contract: 'webvtt.locale-build', input: 'webvtt.locale-build-input', handler: buildCaptions }],
   ['validate-artifact', { contract: 'webvtt.artifact-check', input: 'webvtt.artifact-check-input', handler: checkArtifact }],
 ]);
@@ -30,10 +32,14 @@ const component = {
           || typeof payload.utf8 !== 'string' || !payload.utf8.isWellFormed()) {
           throw new WebvttError('invalid-input', 'Captured invocation schema or profile mismatch.');
         }
-        if (Buffer.byteLength(payload.utf8) > MAX_PAYLOAD_BYTES) throw new WebvttError('limit-exceeded', 'Encoded operation input exceeds 2 MiB.');
+        const inputLimit = id === 'source-semantic-check' ? MAX_SOURCE_CHECK_BYTES : MAX_PAYLOAD_BYTES;
+        if (Buffer.byteLength(payload.utf8) > inputLimit) throw new WebvttError('limit-exceeded', 'Encoded operation input exceeds its captured byte limit.');
         try { input = JSON.parse(payload.utf8); }
         catch { throw new WebvttError('invalid-input', 'Invalid operation JSON.'); }
         if (id === 'extract-source' && !validateSourceExtractionInput(input)) {
+          throw new WebvttError('invalid-input', 'Operation input does not match the SDK schema.');
+        }
+        if (id === 'source-semantic-check' && !validateSourceExtractionCheckInput(input)) {
           throw new WebvttError('invalid-input', 'Operation input does not match the SDK schema.');
         }
         const output = operation.handler(input, metadata.signal);
@@ -41,8 +47,8 @@ const component = {
         return { kind: 'succeeded', utf8: encoded(output) };
       } catch (error) {
         if (!(error instanceof WebvttError)) throw error;
-        if (id === 'extract-source') {
-          const artifactId = input?.artifacts?.[0]?.id;
+        if (id === 'extract-source' || id === 'source-semantic-check') {
+          const artifactId = (id === 'extract-source' ? input : input?.source)?.artifacts?.[0]?.id;
           /** @type {SourceExtractionError} */
           const result = {
             code: extractionCodes.has(error.code) ? error.code : 'invalid-input',

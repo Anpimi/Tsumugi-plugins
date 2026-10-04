@@ -46,5 +46,6 @@
       "maxLength": 64,
       "pattern": "^[0-9a-f]{64}$"
     }
-  }
+  },
+  "description": "Required per-occurrence source evidence. The profile preserves its exact canonical JSON bytes: properties in version, policy, nativeId, timing, settings, layoutDigest order, with JSON.stringify formatting and no extra fields."
 }
