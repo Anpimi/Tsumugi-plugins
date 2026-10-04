@@ -1,0 +1,49 @@
+# Tsumugi plugins
+
+Official plugin packages for [Tsumugi](https://github.com/Anpimi/Tsumugi).
+This repository owns domain implementations, their tests and independently
+versioned artifacts. Tsumugi owns the public SDK, process Host and project engine.
+Plugins do not depend on Core, the desktop frontend or a private workspace.
+
+The repository currently provides a pinned SDK source artifact and an independent
+Rust consumer check. The SMAPI and WebVTT directories identify their migration
+boundaries; they do not yet contain runnable domain packages. No plugin release
+or complete desktop workflow is claimed by this initial repository.
+
+## Build the independent SDK consumer
+
+Use Rust 1.98 or newer and Python 3.11 or newer. From this checkout:
+
+```sh
+python3 tooling/prepare-sdk.py
+cargo test --locked
+cargo run --locked -p tsumugi-sdk-probe -- tooling/sdk-probe/fixtures/manifest.json
+```
+
+The first Cargo dependency fetch needs network or a prepared Cargo cache. With
+that cache, the same commands accept `--offline`. They do not require another
+Tsumugi checkout, a private document or the desktop application.
+
+`sdk.lock.json` pins the included experimental `0.1.0-alpha.1` SDK archive by
+SHA-256 and its original source commit. The archive was built from Tsumugi's SDK;
+it is a consumer artifact, not a fork or another protocol source. It has not been
+published to crates.io. `prepare-sdk.py` verifies and materializes its exact files
+under the ignored `.cache/sdk/` directory. Do not edit that cache or the archive.
+Changes to SDK contracts belong in Tsumugi and require a new explicitly selected
+artifact here. The archive contains the public contract/schema harness and
+JavaScript declarations as well as the Rust data API.
+
+## Package ownership
+
+- `plugins/stardew-smapi/`: SMAPI discovery, source and translation import,
+  identity/matching, checks, building and artifact verification.
+- `plugins/webvtt/`: WebVTT caption profile parsing, identity/timing/layout,
+  payload checks and preservation of non-payload bytes in output.
+- `tooling/`: public SDK consumption and shared build checks.
+
+Each domain package will own its version and changelog. There is no repository
+version train. Installing a package will not authorize its execution or adopt
+its results; those decisions belong to the application's trusted boundaries.
+
+See [contributing](CONTRIBUTING.md) and [SDK provenance](artifacts/sdk/README.md).
+Source is licensed under the [MIT License](LICENSE).

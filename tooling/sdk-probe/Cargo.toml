@@ -1,0 +1,11 @@
+[package]
+name = "tsumugi-sdk-probe"
+version = "0.1.0-alpha.1"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+publish = false
+
+[dependencies]
+tsumugi-plugin-sdk = { path = "../../.cache/sdk/tsumugi-plugin-sdk-0.1.0-alpha.1", version = "=0.1.0-alpha.1" }

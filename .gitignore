@@ -1,0 +1,5 @@
+.cache/
+target/
+.worktrees/
+.DS_Store
+*.log

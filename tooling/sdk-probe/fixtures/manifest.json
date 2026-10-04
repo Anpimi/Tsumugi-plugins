@@ -1,0 +1,62 @@
+{
+  "protocolVersion": 1,
+  "plugin": {
+    "publisher": "example",
+    "id": "example.sdk-consumer",
+    "version": "0.1.0-alpha.1"
+  },
+  "permissions": [],
+  "components": [
+    {
+      "id": "inspector",
+      "scope": "project",
+      "runtime": "native-worker",
+      "entrypoint": "bin/inspector",
+      "dependencies": [],
+      "exit": {
+        "stopTimeoutMs": 100,
+        "cleanupTimeoutMs": 100
+      }
+    }
+  ],
+  "contributions": [
+    {
+      "id": "inspect",
+      "componentId": "inspector",
+      "contribution": {
+        "kind": "capability",
+        "declaration": {
+          "contract": {
+            "id": "example.inspect",
+            "schemaVersion": 1,
+            "behaviorVersion": 1
+          },
+          "inputSchema": {
+            "id": "example.input",
+            "schemaVersion": 1,
+            "behaviorVersion": 1
+          },
+          "outputSchema": {
+            "id": "example.output",
+            "schemaVersion": 1,
+            "behaviorVersion": 1
+          },
+          "errorSchema": {
+            "id": "example.error",
+            "schemaVersion": 1,
+            "behaviorVersion": 1
+          },
+          "profiles": [],
+          "effect": "read-only",
+          "permissions": [],
+          "limits": {
+            "maxInputBytes": 4096,
+            "maxOutputBytes": 4096,
+            "concurrency": 1,
+            "timeoutMs": 1000
+          }
+        }
+      }
+    }
+  ]
+}
