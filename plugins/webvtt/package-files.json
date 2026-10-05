@@ -5,11 +5,6 @@
     "components/component.mjs",
     "components/webvtt.mjs",
     "schemas/cue-basis.schema.json",
-    "schemas/locale-build-input.schema.json",
-    "schemas/locale-build-output.schema.json",
-    "schemas/artifact-check-input.schema.json",
-    "schemas/artifact-check-output.schema.json",
-    "schemas/operation-error.schema.json",
     "docs/contracts.md",
     "LICENSE",
     "PROVENANCE.md",
@@ -18,7 +13,8 @@
     "CHANGELOG.zh-CN.md",
     "package.json",
     "package-files.json",
-    "profiles/source-import.json"
+    "profiles/source-import.json",
+    "profiles/build.json"
   ],
   "sdkFiles": [
     {
@@ -28,6 +24,14 @@
     {
       "source": "javascript/validate-source-extraction-check-input.mjs",
       "target": "sdk/validate-source-extraction-check-input.mjs"
+    },
+    {
+      "source": "javascript/validate-build-input.mjs",
+      "target": "sdk/validate-build-input.mjs"
+    },
+    {
+      "source": "javascript/validate-artifact-check-input.mjs",
+      "target": "sdk/validate-artifact-check-input.mjs"
     },
     {
       "source": "LICENSE",

@@ -32,3 +32,8 @@ it does not use extractor output to define the expected source semantics.
 Shared component, invocation and content types come from the exact SDK artifact
 selected by the repository's `sdk.lock.json`. Generated SDK files and cached
 artifacts are not edited or vendored as another protocol source in this package.
+
+Build and artifact-check wire data now use the same SDK-owned generic build
+contracts. Domain projection and byte-range rendering remain here; the independent
+verifier reparses actual output and returns fixed CheckResults. The obsolete
+experimental dedicated build/check schemas were removed, without conversion.

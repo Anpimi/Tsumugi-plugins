@@ -6,7 +6,7 @@ below abbreviates schema 1 / behavior 1, and `/2:1` means schema 2 / behavior 1.
 These suffixes are documentation notation, not part of a ContractRef's `id`.
 Inputs and outputs are exact JSON encoded in the SDK `EncodedPayload.utf8`.
 Unknown fields and versions are rejected after parsing. JSON.parse does not
-reject duplicate keys in original JSON; the application must capture extraction
+reject duplicate keys in original JSON; the application must capture operation
 payloads from SDK-validated typed inputs. SDK strict Serde acceptance and generic
 semantic validation remain required for arbitrary raw JSON. No payload grants
 execution or adoption.
@@ -15,8 +15,8 @@ execution or adoption.
 | --- | --- | --- | --- | --- |
 | `extract-source` | `webvtt.extract/1` | `tsumugi.source-extraction-input/1` | `tsumugi.content-exchange/2:1` | `tsumugi.source-extraction-error/1` |
 | `source-semantic-check` | `webvtt.source-check/1` | `tsumugi.source-extraction-check-input/1` | `tsumugi.check-results/1` | `tsumugi.source-extraction-error/1` |
-| `build` | `webvtt.locale-build/1` | `webvtt.locale-build-input/1` | `webvtt.locale-build-output/1` | `webvtt.operation-error/1` |
-| `validate-artifact` | `webvtt.artifact-check/1` | `webvtt.artifact-check-input/1` | `webvtt.artifact-check-output/1` | `webvtt.operation-error/1` |
+| `build` | `webvtt.locale-build/1` | `tsumugi.build-input/1` | `tsumugi.artifact-set/1` | `tsumugi.build-error/1` |
+| `validate-artifact` | `webvtt.artifact-check/1` | `tsumugi.artifact-check-input/1` | `tsumugi.check-results/1` | `tsumugi.build-error/1` |
 
 Each contribution requires the exact `webvtt-captions/1` profile. Extraction and
 building return proposals; checking is read-only. The manifest requests only
@@ -103,61 +103,67 @@ explicitly refused without truncation or partial coverage.
 
 ## Building
 
-The [input schema](../schemas/locale-build-input.schema.json) fixes:
+The immutable Resource `build-profile` selects the SDK `BuildDeclaration` in
+[profiles/build.json](../profiles/build.json), fixing the caption profile, builder,
+independent checker, one-artifact/128 KiB limits and mandatory
+`webvtt.artifact-conformance/1` rule. The Host reads and binds this declaration
+without component execution. It supplies no execution or release authority.
 
-- `version: 1` and `template: {utf8, sha256}` from independently captured source.
-- An explicit `locale` and safe root-level `logicalPath`, for example `zh-CN.vtt`.
-- `cues` in exact template order, each containing `ordinal`, `nativeId`,
-  `canonicalId`, `sourceText`, `targetText` and the complete captured `basis`.
+The SDK owns `BuildInput`, `ArtifactSet`, `ArtifactCheckInput`, `CheckResults` and
+`BuildError`. The generated standalone validators come from the exact verified
+SDK archive; there are no domain-specific replacement wire schemas. Build input
+contains a complete `source` ContentExchange, `targetLanguage`, one decided
+`targets` entry per source unit/revision, empty `configuration`, one explicit
+`outputPaths` entry and the declaration's exact `outputLimits`.
 
-The application supplies the already decided target text and verifies its
-project basis and eligibility before dispatch. These fields do not carry the
-application's QA plan, decisions, grants or database handles. Locale syntax here
-is a bounded language label; the application owns supported-locale validation.
+The application fixes project basis, eligible decided text and complete output
+choices before dispatch. The builder independently reparses the captured source
+artifact, checks its digest and the complete source unit/occurrence/basis
+projection, and maps targets by unit/revision rather than array position. No
+Core IDs, QA decisions, grants, database handles or directory authority are
+passed through the domain contract.
 
-The builder reparses the captured template, validates its hash and every cue's
-coverage/source/basis, and replaces only the original payload byte ranges. It
-normalizes target newlines to the template's existing convention: CRLF if present,
-otherwise CR if present, otherwise LF. User-saved target text is not mutated.
-Every other original byte remains intact, including BOM, notes, timing, settings,
-IDs, blank separators and the final terminator. Output is limited to 128 KiB.
+Only original payload byte ranges change. Target newlines use the source's
+existing convention: CRLF if present, otherwise CR if present, otherwise LF.
+User-saved target text is not mutated. Every other byte remains intact, including
+BOM, notes, timing, settings, cue IDs, separators and final terminators.
 
-The [output schema](../schemas/locale-build-output.schema.json) returns `version`,
-`locale`, `logicalPath`, actual `sha256`, exact `utf8`, `cueCount`, and
-`builderVersion: "webvtt-locale-build-1"`. An output path is a safe ASCII `.vtt`
-basename with a 1–80 character stem, never a directory, source filename or reserved
-device name. No file is written by this operation.
+The returned ArtifactSet binds the fixed profile, source-set and target language.
+It contains exactly one artifact: ID `caption-output`, role `caption`, the
+requested logical path, literal UTF-8 and its actual SHA-256. The path is a safe
+ASCII `.vtt` basename with a 1–80 character stem, never a directory, source
+filename or reserved device name. No file is written by this operation.
 
 ## Independent artifact checking
 
-The [check request](../schemas/artifact-check-input.schema.json) contains
-`version: 1`, the complete fixed build `input`, and the actual build `output`.
-The checker validates metadata/hash/version and reparses both source and actual
-output. It verifies all cue identities, timing/settings/layout, decided payloads,
-and every inter-payload and trailing byte segment. It never calls the builder or
-compares against a builder-generated expected file. It also verifies each changed
-payload's exact chosen newline encoding.
+ArtifactCheckInput contains the complete fixed build `input`, actual ArtifactSet
+`output`, and exactly one captured mandatory, nonwaivable requirement for the
+installed `validate-artifact` provider, conformance rule and complete artifact ID.
+The checker verifies metadata/hash and reparses both original source and actual
+output. It checks all cue identities, timing/settings/layout, decided payloads,
+and every inter-payload/trailing byte segment, including exact newline encoding.
+It never calls the builder or constructs a builder-derived expected file.
 
-The [check result](../schemas/artifact-check-output.schema.json) returns
-`version`, `locale`, `logicalPath`, actual `sha256`, `cueCount`, and
-`checkerVersion: "webvtt-locale-artifact-1"`. This is a plugin result claim. The
-application still performs trusted semantic validation and explicit release
-adoption; a successful plugin result cannot authorize itself.
+CheckResults repeats the exact fixed key, input/scope digests and covered target.
+A completed semantic check returns no findings for faithful output, or an error
+finding `artifact-mismatch` targeting `caption-output`. Completed coverage with
+an error finding blocks semantic acceptance. Invalid associations, missing
+requirements and malformed inputs return typed BuildError instead of fabricated
+coverage. The application binds the result to the actual Host provider/channel
+and original requirement, persists proof, and separately adopts a release.
 
 ## Rejections and limits
 
-Extraction and source-check errors use the SDK's closed extraction error codes and a captured artifact
-reference or `null`. Build/check errors use the package's closed
-[operation-error schema](../schemas/operation-error.schema.json). Diagnostics are
-static public descriptions, never source excerpts, machine paths or secrets.
-Cancellation returns a cancelled domain failure if observed; the Host also
-suppresses output after cancellation or close. Unexpected implementation errors
-terminate the component channel rather than fabricate a domain success.
+Extraction/source-check failures use the SDK SourceExtractionError. Build/check
+failures use SDK BuildError, with its closed error code and captured artifact ID
+or null. Diagnostics are static public descriptions, never source excerpts,
+machine paths or secrets. Cancellation returns a cancelled failure if observed;
+the Host also suppresses output after cancellation or close. Unexpected
+implementation errors terminate the component channel.
 
-The source/output limit is 128 KiB, the cue limit is 2000, and each source/target
-payload is at most 16 KiB in actual UTF-8 bytes, including the builder's chosen
-newline encoding. Encoded source/proposal and other operation payloads are
-additionally limited to 2 MiB. The combined source-check request has a separate
-4 MiB limit. All payloads also obey the parent's stricter invocation budget.
-No operation truncates data or returns partial coverage. JSON Schema string
-length alone does not prove byte budgets, hashes, safe references or cue fidelity.
+Source/output remain limited to 128 KiB, 2000 cues and 16 KiB per source/target
+payload in actual UTF-8 bytes, including the chosen newline encoding. Captured
+source/content, ArtifactSet and CheckResults each retain their 2 MiB encoded
+ceiling. BuildInput and combined source/artifact-check requests admit 4 MiB,
+subject to the Host's fixed invocation budget. Oversized operations are refused
+without truncation, partial coverage or fallback to an older protocol.

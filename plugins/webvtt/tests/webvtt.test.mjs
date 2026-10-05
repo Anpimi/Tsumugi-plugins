@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import test from 'node:test';
 import {
-  PROFILE, MAX_CUES, MAX_SOURCE_BYTES, MAX_TEXT_BYTES, MAX_PAYLOAD_BYTES,
+  PROFILE, BUILD_LIMITS, ARTIFACT_ID, ARTIFACT_RULE, MAX_CUES, MAX_SOURCE_BYTES, MAX_TEXT_BYTES, MAX_PAYLOAD_BYTES,
   WebvttError, sha256, parseCaptions, extractSource, validPayload,
   buildCaptions, checkArtifact, safeOutputPath, encoded,
 } from '../components/webvtt.mjs';
@@ -15,12 +15,18 @@ const TARGETS = ['你好\n世界', '等待', '旧', '布局', '相同', '消失'
 const extraction = raw => ({ profile: { ...PROFILE }, sourceSetId: 'captured-set-1', sourceLanguage: 'en-US',
   artifacts: [{ id: 'artifact-source', logicalPath: 'source.vtt', role: 'source', sha256: sha256(raw), utf8: raw }] });
 function buildInput(raw = S1, targets = TARGETS) {
-  return { version: 1, template: { utf8: raw, sha256: sha256(raw) }, locale: 'zh-CN', logicalPath: 'zh-CN.vtt',
-    cues: parseCaptions(raw).cues.map(cue => ({ ordinal: cue.ordinal, nativeId: cue.nativeId, canonicalId: cue.canonicalId,
-      sourceText: cue.sourceText, targetText: targets[cue.ordinal], basis: cue.basis })) };
+  const source = extractSource(extraction(raw));
+  return { source, targetLanguage: 'zh-CN', outputPaths: ['zh-CN.vtt'], outputLimits: { ...BUILD_LIMITS }, configuration: [],
+    targets: source.units.map((unit, ordinal) => ({ unitId: unit.id, sourceRevisionId: unit.sourceRevisionId, text: targets[ordinal] })) };
 }
-const actualOutput = (raw, input) => ({ version: 1, locale: input.locale, logicalPath: input.logicalPath, sha256: sha256(raw), utf8: raw,
-  cueCount: input.cues.length, builderVersion: 'webvtt-locale-build-1' });
+const actualOutput = (raw, input) => ({ profile: { ...PROFILE }, sourceSetId: input.source.sourceSetId,
+  targetLanguage: input.targetLanguage, artifacts: [{ id: ARTIFACT_ID, role: 'caption', logicalPath: input.outputPaths[0], sha256: sha256(raw), utf8: raw }] });
+const checkInput = (input, output) => ({ input, output, requirements: [{ key: { rule: { id: ARTIFACT_RULE, schemaVersion: 1, behaviorVersion: 1 },
+  implementation: { kind: 'plugin', provider: { plugin: { publisher: 'org.tsumugi', id: 'webvtt', version: '0.1.0-alpha.1' },
+    packageDigest: 'a'.repeat(64), componentId: 'caption-worker', contributionId: 'validate-artifact' } } },
+  inputDigest: 'b'.repeat(64), scopeDigest: 'c'.repeat(64), targets: [ARTIFACT_ID], mandatory: true, waivable: false, notApplicable: null }] });
+const semanticFailure = request => assert.deepEqual(checkArtifact(request)[0].outcome.findings,
+  [{ code: 'artifact-mismatch', target: ARTIFACT_ID, severity: 'error' }]);
 const domainError = callback => assert.throws(callback, error => error instanceof WebvttError);
 
 test('all original line endings and BOM combinations match the literal independent byte oracle', () => {
@@ -30,14 +36,14 @@ test('all original line endings and BOM combinations match the literal independe
       const expected = bom + EXPECTED.replaceAll('\n', newline);
       const input = buildInput(source);
       const output = buildCaptions(input);
-      assert.deepEqual(Buffer.from(output.utf8), Buffer.from(expected));
-      assert.equal(output.sha256, sha256(expected));
-      assert.equal(output.cueCount, 6);
+      assert.deepEqual(Buffer.from(output.artifacts[0].utf8), Buffer.from(expected));
+      assert.equal(output.artifacts[0].sha256, sha256(expected));
+      assert.equal(output.artifacts.length, 1);
       // The checker is also exercised directly on the fixed oracle, without
       // using any bytes returned by the builder to define what is correct.
-      const checked = checkArtifact({ version: 1, input, output: actualOutput(expected, input) });
-      assert.equal(checked.checkerVersion, 'webvtt-locale-artifact-1');
-      assert.equal(checked.sha256, sha256(expected));
+      const checked = checkArtifact(checkInput(input, actualOutput(expected, input)));
+      assert.deepEqual(checked[0].outcome, { kind: 'completed', findings: [] });
+      assert.deepEqual(checked[0].key, checkInput(input, actualOutput(expected, input)).requirements[0].key);
     }
   }
 });
@@ -118,7 +124,7 @@ test('bounded source, cue and Unicode text limits reject complete operations wit
   const target = 'a\n'.repeat(MAX_TEXT_BYTES / 2 - 1) + 'a';
   assert.equal(validPayload(target), true);
   const input = buildInput(S1.replaceAll('\n', '\r\n'));
-  input.cues[0].targetText = target;
+  input.targets[0].text = target;
   assert.throws(() => buildCaptions(input), error => error instanceof WebvttError && error.code === 'limit-exceeded');
 });
 
@@ -131,17 +137,22 @@ test('supported timing/settings and region fields remain exact and finite', () =
 
 test('build rejects missing coverage, forged source/basis, unsafe paths and unsupported target text', () => {
   for (const mutate of [
-    input => input.cues.pop(), input => input.cues.reverse(), input => input.cues.push(input.cues[0]),
-    input => { input.cues[0].sourceText = 'forged'; }, input => { input.cues[0].canonicalId = 'other'; },
-    input => { input.cues[0].nativeId = 'KEEP'; }, input => { input.cues[0].basis.layoutDigest = '0'.repeat(64); },
-    input => { input.cues[0].basis.timing = '00:00.000 --> 00:01.000'; },
-    input => { input.template.sha256 = '0'.repeat(64); }, input => { input.executionGrant = true; },
+    input => input.targets.pop(), input => input.targets.push(input.targets[0]),
+    input => { input.targets[0].sourceRevisionId = 'other'; }, input => { input.targets[0].unitId = 'other'; },
+    input => { input.source.units[0].text = 'forged'; }, input => { input.source.order.reverse(); },
+    input => { input.source.units[0].occurrences[0].nativeIdentity.value = 'other'; },
+    input => { input.source.domainBlocks[0].payloadUtf8 = '{}'; },
+    input => { input.source.artifacts[0].sha256 = '0'.repeat(64); }, input => { input.executionGrant = true; },
+    input => { input.configuration = [{}]; }, input => { input.outputPaths.push('another.vtt'); },
+    input => { input.outputLimits.maxArtifacts = 2; }, input => { input.outputLimits.maxTotalBytes -= 1; },
   ]) { const input = buildInput(); mutate(input); domainError(() => buildCaptions(input)); }
+  const permuted = buildInput(); permuted.targets.reverse(); permuted.source.units.reverse();
+  assert.equal(buildCaptions(permuted).artifacts[0].utf8, EXPECTED);
   for (const text of ['', 'a\n\nb', 'x --> y', '<v speaker>x', '&amp;', 'a\0b', 'a\n', '\uD800']) {
-    const input = buildInput(); input.cues[0].targetText = text; domainError(() => buildCaptions(input));
+    const input = buildInput(); input.targets[0].text = text; domainError(() => buildCaptions(input));
   }
   for (const path of ['../zh.vtt', 'i18n/zh.vtt', 'con.vtt', 'CON.vtt', 'source.vtt', 'zh.json', 'COM0.vtt', 'lpt9.vtt']) {
-    assert.equal(safeOutputPath(path), false); const input = buildInput(); input.logicalPath = path; domainError(() => buildCaptions(input));
+    assert.equal(safeOutputPath(path), false); const input = buildInput(); input.outputPaths[0] = path; domainError(() => buildCaptions(input));
   }
   assert.equal(safeOutputPath('zh-CN.vtt'), true);
   assert.equal(validPayload('e\u0301\n👩‍👩‍👦'), true);
@@ -152,28 +163,31 @@ test('checker rejects every non-payload mutation even when the attacker recomput
   for (const [before, after] of [['00:00.000', '00:00.100'], ['color: lime', 'color: red'], ['NOTE Keep', 'NOTE Altered'],
     ['keep\n', 'different\n'], ['你好', '错误'], ['align:center', 'align:left'], ['\n\n', '\n\n\n']]) {
     const forged = actualOutput(EXPECTED.replace(before, after), input);
-    domainError(() => checkArtifact({ version: 1, input, output: forged }));
+    semanticFailure(checkInput(input, forged));
   }
   for (const mutate of [
-    output => { output.sha256 = '0'.repeat(64); }, output => { output.builderVersion = 'other'; },
-    output => { output.cueCount = 5; }, output => { output.locale = 'en'; }, output => { output.logicalPath = 'different.vtt'; },
+    output => { output.artifacts[0].sha256 = '0'.repeat(64); }, output => { output.artifacts[0].id = 'other'; },
+    output => { output.artifacts[0].role = 'other'; }, output => { output.targetLanguage = 'en'; },
+    output => { output.artifacts[0].logicalPath = 'different.vtt'; }, output => { output.sourceSetId = 'other'; },
+    output => { output.profile.behaviorVersion = 2; }, output => { output.artifacts.push(output.artifacts[0]); },
     output => { output.adopted = true; },
-  ]) { const output = actualOutput(EXPECTED, input); mutate(output); domainError(() => checkArtifact({ version: 1, input, output })); }
+  ]) { const output = actualOutput(EXPECTED, input); mutate(output); domainError(() => checkArtifact(checkInput(input, output))); }
+
 });
 
 test('checker preserves mixed original line endings and rejects changed payload encoding', () => {
   const template = 'WEBVTT\r\n\r\nCue\r\n00:00.000 --> 00:01.000\r\nA\nB\r\n\r\nNOTE tail\r\n';
   const input = buildInput(template, ['甲\n乙']);
   const expected = 'WEBVTT\r\n\r\nCue\r\n00:00.000 --> 00:01.000\r\n甲\r\n乙\r\n\r\nNOTE tail\r\n';
-  assert.deepEqual(Buffer.from(buildCaptions(input).utf8), Buffer.from(expected));
-  checkArtifact({ version: 1, input, output: actualOutput(expected, input) });
-  domainError(() => checkArtifact({ version: 1, input, output: actualOutput(expected.replace('甲\r\n乙', '甲\n乙'), input) }));
+  assert.deepEqual(Buffer.from(buildCaptions(input).artifacts[0].utf8), Buffer.from(expected));
+  checkArtifact(checkInput(input, actualOutput(expected, input)));
+  semanticFailure(checkInput(input, actualOutput(expected.replace('甲\r\n乙', '甲\n乙'), input)));
 });
 
 test('domain operations honor cancellation and independently captured source bindings', () => {
   const controller = new AbortController(); controller.abort();
   for (const callback of [() => parseCaptions(S1, controller.signal), () => extractSource(extraction(S1), controller.signal),
-    () => buildCaptions(buildInput(), controller.signal), () => checkArtifact({ version: 1, input: buildInput(), output: actualOutput(EXPECTED, buildInput()) }, controller.signal)]) {
+    () => buildCaptions(buildInput(), controller.signal), () => checkArtifact(checkInput(buildInput(), actualOutput(EXPECTED, buildInput())), controller.signal)]) {
     assert.throws(callback, error => error instanceof WebvttError && error.code === 'cancelled');
   }
   for (const mutate of [
@@ -181,4 +195,25 @@ test('domain operations honor cancellation and independently captured source bin
     request => { request.artifacts[0].role = 'other'; }, request => { request.artifacts.push(request.artifacts[0]); },
     request => { request.profile.behaviorVersion = 2; },
   ]) { const request = extraction(S1); mutate(request); domainError(() => extractSource(request)); }
+});
+
+
+test('artifact requirements retain exact mandatory provider, basis and complete coverage', () => {
+  const input = buildInput();
+  const output = actualOutput(EXPECTED, input);
+  for (const mutate of [
+    r => { r.requirements = []; }, r => { r.requirements.push(r.requirements[0]); },
+    r => { r.requirements[0].mandatory = false; }, r => { r.requirements[0].waivable = true; },
+    r => { r.requirements[0].notApplicable = 'ignored'; }, r => { r.requirements[0].targets = []; },
+    r => { r.requirements[0].targets.push('other'); }, r => { r.requirements[0].inputDigest = 'bad'; },
+    r => { r.requirements[0].scopeDigest = 'bad'; }, r => { r.requirements[0].key.rule.behaviorVersion = 2; },
+    r => { r.requirements[0].key.implementation.provider.contributionId = 'build'; },
+    r => { r.requirements[0].key.implementation.provider.packageDigest = 'bad'; },
+  ]) { const request = checkInput(input, output); mutate(request); domainError(() => checkArtifact(request)); }
+  const request = checkInput(input, output);
+  const frozen = structuredClone(request);
+  assert.deepEqual(checkArtifact(request), [{ key: request.requirements[0].key,
+    inputDigest: request.requirements[0].inputDigest, scopeDigest: request.requirements[0].scopeDigest,
+    coveredTargets: [ARTIFACT_ID], outcome: { kind: 'completed', findings: [] } }]);
+  assert.deepEqual(request, frozen);
 });

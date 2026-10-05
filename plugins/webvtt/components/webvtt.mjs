@@ -12,8 +12,9 @@ export const MAX_TEXT_BYTES = 16 * 1024;
 export const MAX_PAYLOAD_BYTES = 2 * 1024 * 1024;
 export const MAX_SOURCE_CHECK_BYTES = 4 * 1024 * 1024;
 export const PROFILE = Object.freeze({ id: 'webvtt-captions', schemaVersion: 1, behaviorVersion: 1 });
-export const BUILDER_VERSION = 'webvtt-locale-build-1';
-export const CHECKER_VERSION = 'webvtt-locale-artifact-1';
+export const BUILD_LIMITS = Object.freeze({ maxArtifacts: 1, maxTotalBytes: MAX_SOURCE_BYTES });
+export const ARTIFACT_ID = 'caption-output';
+export const ARTIFACT_RULE = 'webvtt.artifact-conformance';
 const POLICY = 'webvtt-cue/1';
 const contract = id => ({ id, schemaVersion: 1, behaviorVersion: 1 });
 const asciiWhitespace = /[\t\n\f\r ]+/;
@@ -364,40 +365,55 @@ function sameBasis(actual, expected) {
     && Array.isArray(actual.settings) && actual.settings.length === expected.settings.length
     && actual.settings.every((setting, index) => setting === expected.settings[index]);
 }
+/** The facade performs SDK structural validation; this boundary verifies the
+ * complete domain projection against captured source bytes, never opaque IDs.
+ * @param {import('../../../.cache/sdk/tsumugi-plugin-sdk-0.1.0-alpha.1/javascript/build.js').BuildInput} input */
 function prepareBuild(input, signal) {
-  record(input, ['version', 'template', 'locale', 'logicalPath', 'cues']);
-  record(input.template, ['utf8', 'sha256']);
-  if (input.version !== 1 || !language(input.locale)) reject('invalid-input', 'Unsupported build request or locale.');
-  if (!safeOutputPath(input.logicalPath)) reject('unsafe-path', 'Output must use a safe caption basename.');
-  scalar(input.template.utf8);
-  if (!digest(input.template.sha256) || sha256(input.template.utf8) !== input.template.sha256) reject('invalid-template', 'Captured template digest mismatch.');
-  let parsed;
-  try { parsed = parseCaptions(input.template.utf8, signal); }
-  catch (error) {
-    if (!(error instanceof WebvttError) || ['cancelled', 'limit-exceeded'].includes(error.code)) throw error;
-    reject('invalid-template', 'Captured template is not supported caption data.');
+  cancelled(signal);
+  record(input, ['source', 'targetLanguage', 'targets', 'configuration', 'outputPaths', 'outputLimits']);
+  record(input.source, ['profile', 'sourceSetId', 'sourceLanguage', 'artifacts', 'units', 'order', 'relations', 'domainBlocks']);
+  record(input.outputLimits, ['maxArtifacts', 'maxTotalBytes']);
+  encoded(input, MAX_SOURCE_CHECK_BYTES);
+  encoded(input.source);
+  if (!language(input.targetLanguage) || !Array.isArray(input.configuration) || input.configuration.length !== 0
+    || input.outputLimits.maxArtifacts !== BUILD_LIMITS.maxArtifacts || input.outputLimits.maxTotalBytes !== BUILD_LIMITS.maxTotalBytes) {
+    reject('invalid-input', 'Unsupported build language, configuration or fixed output limits.');
   }
-  if (!Array.isArray(input.cues) || input.cues.length !== parsed.cues.length) reject('identity-mismatch', 'Build must cover every template cue exactly once.');
-  for (const [ordinal, cue] of parsed.cues.entries()) {
+  if (!Array.isArray(input.outputPaths) || input.outputPaths.length !== 1 || !safeOutputPath(input.outputPaths[0])) {
+    reject('unsafe-path', 'Build requires exactly one safe caption basename.');
+  }
+  const { artifact, parsed } = capturedSource(input.source, signal);
+  if (!faithfulSourceProposal({ proposal: input.source }, artifact, parsed, signal)) {
+    reject('identity-mismatch', 'Build source must retain complete caption coverage, identity and basis.');
+  }
+  if (!Array.isArray(input.targets) || input.targets.length !== input.source.units.length) {
+    reject('identity-mismatch', 'Build must cover every source unit exactly once.');
+  }
+  const units = new Map(input.source.units.map(unit => [unit.id, unit]));
+  const texts = new Map();
+  for (const target of input.targets) {
     cancelled(signal);
-    const entry = input.cues[ordinal];
-    record(entry, ['ordinal', 'nativeId', 'canonicalId', 'sourceText', 'targetText', 'basis']);
-    if (entry.ordinal !== ordinal || entry.nativeId !== cue.nativeId || entry.canonicalId !== cue.canonicalId
-      || entry.sourceText !== cue.sourceText || !sameBasis(entry.basis, cue.basis)) reject('identity-mismatch', 'Captured cue identity or source basis mismatch.');
-    if (!validPayload(entry.targetText)) reject('invalid-payload', 'Unsupported or empty target caption payload.');
+    record(target, ['unitId', 'sourceRevisionId', 'text']);
+    const unit = units.get(target.unitId);
+    if (!unit || texts.has(target.unitId) || target.sourceRevisionId !== unit.sourceRevisionId) {
+      reject('identity-mismatch', 'Build target does not match its fixed source revision.');
+    }
+    if (!validPayload(target.text)) reject('invalid-payload', 'Unsupported or empty target caption payload.');
+    texts.set(target.unitId, target.text);
   }
-  return parsed;
+  const byOccurrence = new Map(input.source.units.map(unit => [unit.occurrences[0].id, unit.id]));
+  return { parsed, targets: input.source.order.map(id => texts.get(byOccurrence.get(id))) };
 }
 
 /** Replace only parsed payload ranges in a captured template. Never write files. */
 export function buildCaptions(input, signal) {
-  const parsed = prepareBuild(input, signal);
+  const { parsed, targets } = prepareBuild(input, signal);
   const pieces = [];
   let offset = 0;
   for (const cue of parsed.cues) {
     cancelled(signal);
     pieces.push(parsed.bytes.subarray(offset, cue.start));
-    const payload = Buffer.from(normalize(input.cues[cue.ordinal].targetText).replaceAll('\n', parsed.newline), 'utf8');
+    const payload = Buffer.from(normalize(targets[cue.ordinal]).replaceAll('\n', parsed.newline), 'utf8');
     if (payload.length > MAX_TEXT_BYTES) reject('limit-exceeded', 'Encoded target caption payload exceeds 16 KiB.');
     pieces.push(payload);
     offset = cue.end;
@@ -406,25 +422,65 @@ export function buildCaptions(input, signal) {
   const bytes = Buffer.concat(pieces);
   if (bytes.length > MAX_SOURCE_BYTES) reject('limit-exceeded', 'Built caption artifact exceeds 128 KiB.');
   const utf8 = bytes.toString('utf8');
-  const result = { version: 1, locale: input.locale, logicalPath: input.logicalPath, sha256: sha256(utf8), utf8,
-    cueCount: parsed.cues.length, builderVersion: BUILDER_VERSION };
+  const result = { profile: { ...PROFILE }, sourceSetId: input.source.sourceSetId, targetLanguage: input.targetLanguage,
+    artifacts: [{ id: ARTIFACT_ID, role: 'caption', logicalPath: input.outputPaths[0], sha256: sha256(utf8), utf8 }] };
   encoded(result);
   return result;
+}
+
+function artifactRequirement(request) {
+  if (!Array.isArray(request.requirements) || request.requirements.length !== 1) {
+    reject('invalid-input', 'Expected exactly one fixed artifact conformance requirement.');
+  }
+  const requirement = request.requirements[0];
+  const provider = requirement.key?.implementation?.provider;
+  if (!exactContract(requirement.key?.rule, ARTIFACT_RULE) || requirement.key.implementation.kind !== 'plugin'
+    || provider?.plugin?.publisher !== 'org.tsumugi' || provider.plugin.id !== 'webvtt' || provider.plugin.version !== '0.1.0-alpha.1'
+    || provider.componentId !== 'caption-worker' || provider.contributionId !== 'validate-artifact'
+    || !digest(provider.packageDigest) || !digest(requirement.inputDigest) || !digest(requirement.scopeDigest)
+    || requirement.mandatory !== true || requirement.waivable !== false || requirement.notApplicable !== null
+    || !Array.isArray(requirement.targets) || requirement.targets.length !== 1 || requirement.targets[0] !== ARTIFACT_ID) {
+    reject('invalid-input', 'Artifact requirement does not match the fixed rule, provider or complete target.');
+  }
+  return requirement;
 }
 
 /** Reparse actual output and compare every inter-payload byte segment. This
  * verifier never calls the builder or reconstructs an expected output file. */
 export function checkArtifact(request, signal) {
-  record(request, ['version', 'input', 'output']);
-  if (request.version !== 1) reject('invalid-input', 'Unsupported artifact check request.');
+  cancelled(signal);
+  record(request, ['input', 'output', 'requirements']);
+  encoded(request, MAX_SOURCE_CHECK_BYTES);
+  const requirement = artifactRequirement(request);
   const input = request.input;
-  const output = request.output;
-  const original = prepareBuild(input, signal);
-  record(output, ['version', 'locale', 'logicalPath', 'sha256', 'utf8', 'cueCount', 'builderVersion']);
-  scalar(output.utf8);
-  if (output.version !== 1 || output.locale !== input.locale || output.logicalPath !== input.logicalPath
-    || output.cueCount !== original.cues.length || output.builderVersion !== BUILDER_VERSION
+  const { parsed: original, targets } = prepareBuild(input, signal);
+  const artifacts = request.output;
+  record(artifacts, ['profile', 'sourceSetId', 'targetLanguage', 'artifacts']);
+  encoded(artifacts);
+  if (!exactContract(artifacts.profile, PROFILE.id) || artifacts.sourceSetId !== input.source.sourceSetId
+    || artifacts.targetLanguage !== input.targetLanguage || !Array.isArray(artifacts.artifacts) || artifacts.artifacts.length !== 1) {
+    reject('invalid-output', 'Artifact set does not match the fixed build input.');
+  }
+  const output = artifacts.artifacts[0];
+  record(output, ['id', 'role', 'logicalPath', 'sha256', 'utf8']);
+  scalar(output.utf8, 'invalid-output');
+  if (output.id !== ARTIFACT_ID || output.role !== 'caption' || output.logicalPath !== input.outputPaths[0]
     || !digest(output.sha256) || sha256(output.utf8) !== output.sha256) reject('invalid-output', 'Artifact metadata or digest mismatch.');
+  let faithful = true;
+  try { verifyArtifact(original, targets, output, signal); }
+  catch (error) {
+    if (!(error instanceof WebvttError) || error.code !== 'invalid-output') throw error;
+    faithful = false;
+  }
+  cancelled(signal);
+  const result = [{ key: structuredClone(requirement.key), inputDigest: requirement.inputDigest,
+    scopeDigest: requirement.scopeDigest, coveredTargets: [...requirement.targets],
+    outcome: { kind: 'completed', findings: faithful ? [] : [{ code: 'artifact-mismatch', target: ARTIFACT_ID, severity: 'error' }] } }];
+  encoded(result);
+  return result;
+}
+
+function verifyArtifact(original, targets, output, signal) {
   let actual;
   try { actual = parseCaptions(output.utf8, signal); }
   catch (error) {
@@ -440,18 +496,15 @@ export function checkArtifact(request, signal) {
     const after = actual.cues[index];
     if (!original.bytes.subarray(sourceOffset, before.start).equals(actual.bytes.subarray(outputOffset, after.start))
       || before.nativeId !== after.nativeId || !sameBasis(after.basis, before.basis)
-      || after.sourceText !== normalize(input.cues[index].targetText)
-      || actual.bytes.subarray(after.start, after.end).toString('utf8') !== normalize(input.cues[index].targetText).replaceAll('\n', original.newline)) {
+      || after.sourceText !== normalize(targets[index])
+      || actual.bytes.subarray(after.start, after.end).toString('utf8') !== normalize(targets[index]).replaceAll('\n', original.newline)) {
       reject('invalid-output', 'Artifact changed caption structure, identity or decided text.');
     }
     sourceOffset = before.end;
     outputOffset = after.end;
   }
   if (!original.bytes.subarray(sourceOffset).equals(actual.bytes.subarray(outputOffset))) reject('invalid-output', 'Artifact changed trailing template bytes.');
-  const result = { version: 1, locale: output.locale, logicalPath: output.logicalPath, sha256: output.sha256,
-    cueCount: actual.cues.length, checkerVersion: CHECKER_VERSION };
-  encoded(result);
-  return result;
+
 }
 
 export function encoded(value, limit = MAX_PAYLOAD_BYTES) {

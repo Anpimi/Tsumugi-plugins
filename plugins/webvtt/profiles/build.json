@@ -1,0 +1,21 @@
+{
+  "displayName": "WebVTT captions",
+  "profile": {
+    "id": "webvtt-captions",
+    "schemaVersion": 1,
+    "behaviorVersion": 1
+  },
+  "builder": "build",
+  "checker": "validate-artifact",
+  "outputLimits": {
+    "maxArtifacts": 1,
+    "maxTotalBytes": 131072
+  },
+  "artifactRules": [
+    {
+      "id": "webvtt.artifact-conformance",
+      "schemaVersion": 1,
+      "behaviorVersion": 1
+    }
+  ]
+}

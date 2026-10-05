@@ -12,9 +12,11 @@
 - 通过 SDK 检查要求与结果执行不可豁免的固定源语义检查；使用独立源 JSON 预期，拒绝伪造覆盖、范围、身份、显示依据、领域块与检查策略。
 - JavaScript SDK 组件：捕获 WebVTT 源提取、按字节范围构建本地化字幕、独立检查实际产物字节。
 - 字幕 profile 1：显式 ASCII cue 身份、时间与设置，以及 BOM、换行、NOTE、STYLE、REGION 和全部非 payload 字节保留。
-- 带版本的构建、检查与身份依据 schema；有界输入和结果；可恢复领域错误；公开源码来源与固定字节预期、拒绝样本。
+- SDK 构建/检查契约与带版本的身份依据 schema；有界输入和结果；可恢复领域错误；公开源码来源与固定字节预期、拒绝样本。
 
 ### 变更
+
+- 构建改为消费 SDK BuildInput 并返回 ArtifactSet；捕获的 BuildDeclaration 使独立构建器和检查器可被发现，产物检查返回必需 CheckResults，语义错误继续阻止采纳。拒绝过去实验专用构建/检查 JSON，不做转换；字幕限制和字节保真承诺不变。
 
 - 提取结果采用 content-exchange schema 2 / behavior 1，提供原 cue ID 显示值与 UTF-8 字节范围。拒绝过去开发结果形状；调用方必须使用同一独立选择的 SDK 产物。
 

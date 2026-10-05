@@ -29,3 +29,8 @@ strict receiver and generated schema. A package resource fixes material and
 independent provider/check policy, while directory and current execution authority
 remain application-owned. The added resource stays in this same unreleased
 experimental package batch and does not establish a completed desktop migration.
+
+The current selected snapshot also includes generic BuildInput/ArtifactSet,
+ArtifactCheckInput/CheckResults, BuildDeclaration and BuildError, with generated
+JavaScript build declarations and standalone structural validators. The plugin
+uses these public contracts while retaining its own caption semantics.

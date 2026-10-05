@@ -33,11 +33,11 @@ are ESM `.mjs` files. From the plugin repository, prepare the exact selected SDK
 with `python3 tooling/prepare-sdk.py`; JSDoc type references resolve only to that
 verified `.cache/sdk/` artifact, never another source checkout. Common SDK types
 are erased development references and create no Node runtime import. The public
-packager also materializes the SDK-generated standalone extraction and source-check
+packager also materializes the SDK-generated standalone extraction, source-check, build and artifact-check
 validators and their license from the same verified artifact, recording its lock.
 This is a derived SDK dependency, not a hand-edited protocol copy. The component uses JSON.parse:
 it does not prove duplicate-key rejection or equivalence to strict Rust SDK
-acceptance. The application must serialize typed SDK-validated extraction and check inputs;
+acceptance. The application must serialize typed SDK-validated operation inputs;
 arbitrary raw JSON also needs the SDK strict receiver.
 
 From this package directory, run `node --test tests/*.test.mjs` for the domain
@@ -59,6 +59,13 @@ revision policy and mandatory source-semantic rule before extraction. The Host
 reads this immutable resource without executing the component. The application
 still selects the directory/runtime and separately authorizes each fixed attempt;
 the resource grants no file access or execution permission.
+
+The Resource `build-profile` similarly fixes generic SDK build input/output,
+complete output limits and the independent mandatory artifact checker. It lets
+installed-capability consumers discover this package without domain-specific
+routing. Older experimental build/check JSON is refused. Building and checking
+have separate current execution permissions; a semantic error finding prevents
+acceptance even though the check completed.
 
 `components/component.mjs` exports the SDK `activate(api)` facade. It registers
 exactly one selected contribution: `extract-source`, `source-semantic-check`,

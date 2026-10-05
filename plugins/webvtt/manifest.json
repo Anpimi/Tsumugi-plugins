@@ -132,17 +132,17 @@
             "behaviorVersion": 1
           },
           "inputSchema": {
-            "id": "webvtt.locale-build-input",
+            "id": "tsumugi.build-input",
             "schemaVersion": 1,
             "behaviorVersion": 1
           },
           "outputSchema": {
-            "id": "webvtt.locale-build-output",
+            "id": "tsumugi.artifact-set",
             "schemaVersion": 1,
             "behaviorVersion": 1
           },
           "errorSchema": {
-            "id": "webvtt.operation-error",
+            "id": "tsumugi.build-error",
             "schemaVersion": 1,
             "behaviorVersion": 1
           },
@@ -160,7 +160,7 @@
             }
           ],
           "limits": {
-            "maxInputBytes": 2097152,
+            "maxInputBytes": 4194304,
             "maxOutputBytes": 2097152,
             "concurrency": 1,
             "timeoutMs": 30000
@@ -180,17 +180,17 @@
             "behaviorVersion": 1
           },
           "inputSchema": {
-            "id": "webvtt.artifact-check-input",
+            "id": "tsumugi.artifact-check-input",
             "schemaVersion": 1,
             "behaviorVersion": 1
           },
           "outputSchema": {
-            "id": "webvtt.artifact-check-output",
+            "id": "tsumugi.check-results",
             "schemaVersion": 1,
             "behaviorVersion": 1
           },
           "errorSchema": {
-            "id": "webvtt.operation-error",
+            "id": "tsumugi.build-error",
             "schemaVersion": 1,
             "behaviorVersion": 1
           },
@@ -208,7 +208,7 @@
             }
           ],
           "limits": {
-            "maxInputBytes": 2097152,
+            "maxInputBytes": 4194304,
             "maxOutputBytes": 2097152,
             "concurrency": 1,
             "timeoutMs": 30000
@@ -227,6 +227,19 @@
           "behaviorVersion": 1
         },
         "path": "profiles/source-import.json"
+      }
+    },
+    {
+      "id": "build-profile",
+      "componentId": "caption-worker",
+      "contribution": {
+        "kind": "resource",
+        "schema": {
+          "id": "tsumugi.build-declaration",
+          "schemaVersion": 1,
+          "behaviorVersion": 1
+        },
+        "path": "profiles/build.json"
       }
     }
   ]
