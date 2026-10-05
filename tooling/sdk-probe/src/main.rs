@@ -93,4 +93,73 @@ mod tests {
             ContractErrorCode::ResultMismatch
         );
     }
+
+    #[test]
+    fn standalone_translation_consumer_uses_sdk_data_and_real_resource_bindings() {
+        use tsumugi_plugin_sdk::*;
+        let manifest = parse_manifest(include_bytes!(
+            "../../../plugins/stardew-smapi/manifest.json"
+        ))
+        .unwrap();
+        let declaration = parse_translation_import_declaration(include_bytes!(
+            "../../../plugins/stardew-smapi/profiles/translation-import.json"
+        ))
+        .unwrap();
+        let binding = declaration.bind(&manifest, &"a".repeat(64)).unwrap();
+        assert_eq!(
+            binding.extractor.provider.contribution_id,
+            "import-translations"
+        );
+        assert_eq!(
+            binding.checker.provider.contribution_id,
+            "translation-semantic-check"
+        );
+        let input = TranslationExtractionInput {
+            profile: declaration.profile.clone(),
+            import_id: "fixed-import".into(),
+            source_set_id: "fixed-set".into(),
+            source_snapshot_id: "fixed-snapshot".into(),
+            target_language: "zh-CN".into(),
+            language_evidence: TranslationLanguageEvidence::UserConfirmed,
+            native_scope: TranslationNativeScope {
+                namespace: "Example.Mod".into(),
+                policy: ContractRef {
+                    id: "smapi-native-key".into(),
+                    schema_version: 1,
+                    behavior_version: 1,
+                },
+            },
+            artifacts: vec![CapturedTextArtifact {
+                id: "translated-file".into(),
+                logical_path: "i18n/zh.json".into(),
+                role: "translation".into(),
+                sha256: payload_digest("\u{feff}{}\r\n"),
+                utf8: "\u{feff}{}\r\n".into(),
+            }],
+        };
+        binding.validate_input(&input).unwrap();
+        let mut proposal = TranslationExchange {
+            profile: input.profile.clone(),
+            import_id: input.import_id.clone(),
+            source_set_id: input.source_set_id.clone(),
+            source_snapshot_id: input.source_snapshot_id.clone(),
+            target_language: input.target_language.clone(),
+            declared_language: "zh".into(),
+            language_evidence: input.language_evidence,
+            native_scope: input.native_scope.clone(),
+            artifacts: input.artifacts.clone(),
+            entries: vec![],
+            order: vec![],
+        };
+        validate_translation_extraction(&input, &proposal).unwrap();
+        proposal.artifacts[0].utf8.push('\n');
+        proposal.artifacts[0].sha256 = payload_digest(&proposal.artifacts[0].utf8);
+        proposal.validate().unwrap();
+        assert_eq!(
+            validate_translation_extraction(&input, &proposal)
+                .unwrap_err()
+                .code,
+            ContractErrorCode::ResultMismatch
+        );
+    }
 }

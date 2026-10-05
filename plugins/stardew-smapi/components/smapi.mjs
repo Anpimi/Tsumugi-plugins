@@ -109,9 +109,8 @@ function manifest(raw, signal) {
   return { namespace, version, sourceTemplate: version.includes('%') };
 }
 
-/** Parse source or existing translations with the same flat-file profile.
- * Translation transport/adoption is separate; empty translation files may be
- * represented here but no Worker import capability is advertised yet. */
+/** Parse source or existing translations with the same complete flat profile.
+ * An empty object is a valid translation proposal, while source requires text. */
 export function parseFlat(raw, { signal, allowEmpty = false, strict = false, maxBytes = MAX_SOURCE_BYTES } = {}) {
   const parsed = parseJsonc(raw, { signal, strict, maxBytes });
   if (parsed.tree.type !== 'object') reject('unsupported-structure', 'Expected a flat string object.');
@@ -226,6 +225,82 @@ export function checkSourceSemantics(input, signal) {
   guard(signal); return checkResult(fixed, findings);
 }
 
+function capturedTranslations(input, signal) {
+  guard(signal); encoded(input);
+  if (!exact(input.profile, PROFILE.id)) reject('unsupported-profile', 'Unsupported SMAPI profile.');
+  if (!opaque(input.importId) || !opaque(input.sourceSetId) || !opaque(input.sourceSnapshotId)
+    || input.languageEvidence !== 'user-confirmed' || input.artifacts?.length !== 1
+    || !ascii(input.nativeScope?.namespace, 256) || !exact(input.nativeScope?.policy, 'smapi-native-key')) {
+    reject('invalid-input', 'Expected complete fixed translation scope and one captured file.');
+  }
+  const artifact = input.artifacts[0];
+  if (!opaque(artifact.id) || artifact.role !== 'translation' || !digest(artifact.sha256)
+    || sha256(scalar(artifact.utf8)) !== artifact.sha256) reject('invalid-input', 'Captured translation binding mismatch.');
+  const declared = localePath(artifact.logicalPath, 128);
+  const target = canonicalLocale(input.targetLanguage);
+  if (!declared || !target || declared.locale.language !== target.language) {
+    reject('invalid-input', 'Choose one canonical translation filename and a confirmed target with the same base language.');
+  }
+  // Registry membership, current adopted source and actual consent are checked
+  // by the application. This value supplies domain evidence, never a grant.
+  return { artifact, declaredLanguage: declared.stem, entries: parseFlat(artifact.utf8, { signal, allowEmpty: true }) };
+}
+
+export function extractTranslations(input, signal) {
+  const captured = capturedTranslations(input, signal);
+  const output = { profile: { ...PROFILE }, importId: input.importId, sourceSetId: input.sourceSetId,
+    sourceSnapshotId: input.sourceSnapshotId, targetLanguage: input.targetLanguage,
+    declaredLanguage: captured.declaredLanguage, languageEvidence: input.languageEvidence,
+    nativeScope: { namespace: input.nativeScope.namespace, policy: { ...input.nativeScope.policy } },
+    artifacts: input.artifacts.map(artifact => ({ ...artifact })), entries: [], order: [] };
+  for (const [index, entry] of captured.entries.entries()) {
+    guard(signal); const id = `translation-${index}`;
+    output.entries.push({ id, text: entry.text, source: { artifactId: captured.artifact.id, range: entry.valueRange },
+      nativeIdentity: { namespace: input.nativeScope.namespace, value: entry.canonicalKey, policy: contract('smapi-native-key'),
+        display: { value: entry.key, source: { artifactId: captured.artifact.id, range: entry.keyRange } } } });
+    output.order.push(id);
+  }
+  encoded(output); return output;
+}
+
+function faithfulTranslationProposal(proposal, input, captured, signal) {
+  if (!exact(proposal.profile, PROFILE.id)
+    || ['importId', 'sourceSetId', 'sourceSnapshotId', 'targetLanguage', 'languageEvidence'].some(key => proposal[key] !== input[key])
+    || proposal.declaredLanguage !== captured.declaredLanguage || proposal.nativeScope.namespace !== input.nativeScope.namespace
+    || !exact(proposal.nativeScope.policy, 'smapi-native-key') || proposal.artifacts.length !== 1
+    || proposal.entries.length !== captured.entries.length || proposal.order.length !== captured.entries.length) return false;
+  const retained = proposal.artifacts[0];
+  if (['id', 'logicalPath', 'role', 'sha256', 'utf8'].some(key => retained[key] !== captured.artifact[key])) return false;
+  const byId = new Map();
+  for (const entry of proposal.entries) {
+    guard(signal);
+    if (!opaque(entry.id) || byId.has(entry.id)) return false;
+    byId.set(entry.id, entry);
+  }
+  const ordered = new Set();
+  for (const [index, expected] of captured.entries.entries()) {
+    guard(signal); const id = proposal.order[index]; const entry = byId.get(id);
+    if (!entry || ordered.has(id)) return false;
+    ordered.add(id); const native = entry.nativeIdentity;
+    if (entry.text !== expected.text || !sameRange(entry.source, expected.valueRange, captured.artifact.id)
+      || native.namespace !== input.nativeScope.namespace || native.value !== expected.canonicalKey
+      || !exact(native.policy, 'smapi-native-key') || native.display.value !== expected.key
+      || !sameRange(native.display.source, expected.keyRange, captured.artifact.id)) return false;
+  }
+  return true;
+}
+
+/** Independently reparse the original whole file, never the extractor's output.
+ * Matching, selection conflicts and per-entry adoption remain Core decisions. */
+export function checkTranslationSemantics(request, signal) {
+  encoded(request, MAX_CHECK_BYTES);
+  const captured = capturedTranslations(request.input, signal);
+  const fixed = requirement(request, 'smapi.translation-semantics', 'translation-semantic-check', request.input.importId);
+  const findings = faithfulTranslationProposal(request.proposal, request.input, captured, signal) ? []
+    : [{ code: 'translation-mismatch', target: request.input.importId, severity: 'error' }];
+  guard(signal); return checkResult(fixed, findings);
+}
+
 /** Inventory names and counts exactly; braces outside a well-formed named
  * marker remain text, matching the preceding SMAPI review profile. */
 export function markers(text) {
@@ -251,12 +326,15 @@ function canonicalLocale(value) {
     return locale.toString() === value ? locale : null;
   } catch { return null; }
 }
+function localePath(path, maxStem) {
+  const match = typeof path === 'string' && /^i18n\/([A-Za-z0-9-]{1,128})\.json$/.exec(path);
+  if (!match || match[1].length > maxStem || /^(default|con|prn|aux|nul|com[0-9]|lpt[0-9])$/i.test(match[1])) return null;
+  const locale = canonicalLocale(match[1]);
+  return locale ? { stem: match[1], locale } : null;
+}
 export function safeOutputPath(path, targetLanguage) {
-  if (typeof path !== 'string' || !/^i18n\/[A-Za-z0-9-]{1,80}\.json$/.test(path)) return false;
-  const stem = path.slice(5, -5);
-  const fileLocale = canonicalLocale(stem); const projectLocale = canonicalLocale(targetLanguage);
-  return !/^(default|con|prn|aux|nul|com[0-9]|lpt[0-9])$/i.test(stem)
-    && fileLocale !== null && projectLocale !== null && fileLocale.language === projectLocale.language;
+  const declared = localePath(path, 80); const target = canonicalLocale(targetLanguage);
+  return declared !== null && target !== null && declared.locale.language === target.language;
 }
 function prepareBuild(input, signal) {
   guard(signal); encoded(input, MAX_CHECK_BYTES);

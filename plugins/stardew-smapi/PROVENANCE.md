@@ -21,7 +21,10 @@ The licensed Lookup Anything files and independent .NET oracle in
 Their README and MIT license describe that source. Maintenance fixtures are
 isolated synthetic examples. They do not prove game or installed Mod compatibility.
 
-This first candidate implements source extraction and separate semantic checking,
-locale building and separate artifact checking. Existing translation transport,
-project matching/adoption and final desktop cutover remain incomplete; a local
-decoder or a package receipt does not establish those flows.
+The candidate implements source extraction/checking, complete existing-translation
+extraction with independent whole-file checking, and locale building/artifact
+checking. Translation data and Resource contracts come from the exact public SDK
+producer selected in `sdk.lock.json`; no Core implementation is imported at runtime.
+Project language confirmation, current-source matching, per-entry candidate/selection
+adoption and final desktop cutover remain incomplete. Domain output and package
+receipts cannot establish those application workflows.

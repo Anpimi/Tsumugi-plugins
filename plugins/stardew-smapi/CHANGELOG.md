@@ -10,5 +10,6 @@ Development target: **0.1.0-alpha.1**. No plugin release has been published.
 
 - An independent JavaScript SMAPI flat profile captures source content with native key and original byte-range evidence, and checks the complete proposal separately. The fixed parser retains JSONC and BOM handling with explicit bounded refusals.
 - Generic SDK locale builds and separate strict artifact checks preserve complete fixed target coverage, canonical key/value output and named marker rules. The package includes its locked JSONC dependency and public SDK validators with licenses.
+- Complete existing-translation extraction retains the current source snapshot, confirmed target, original material and native key references. A separate mandatory checker verifies the whole proposal; empty objects and empty values remain distinct, and unsupported filenames, duplicates and exceeded limits refuse success.
 
-Existing translation import and full desktop migration remain under development.
+Project matching, per-entry adoption and full desktop migration remain under development.

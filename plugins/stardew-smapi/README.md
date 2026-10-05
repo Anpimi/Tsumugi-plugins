@@ -58,14 +58,31 @@ and compares named marker inventories and control-character restrictions. It
 never uses the builder's output as its expected oracle. Fixed independent
 `smapi.artifact-conformance` evidence remains mandatory.
 
+`import-translations` consumes SDK TranslationExtractionInput for one complete
+captured `i18n/<locale>.json`, at most 128 KiB, with the current source set/snapshot,
+explicit project target and fixed native namespace/policy. The domain validates
+canonical filename spelling and matching base language, retains the filename's
+declared language separately, and never creates a project language. Registered
+language membership, current adopted source and actual user confirmation belong
+to the application; the `user-confirmed` wire value is evidence, not a grant.
+`default.json`, nested paths, duplicate keys, invalid text and over-limit files
+are refused. Empty objects retain a complete zero-entry proposal; empty strings
+remain actual values. The proposal keeps original artifacts, native spellings,
+quoted UTF-8 references and complete entry order without allocating project units
+or revisions. The separately invoked `translation-semantic-check` reparses the
+original whole file and verifies all values, keys, references, scope and coverage
+under the mandatory `smapi.translation-semantics` rule. Completed check coverage
+with an error finding still blocks adoption.
+
 ## Integration boundary
 
-The `source-profile` and `build-profile` resources use SDK-owned declarations.
-Only `extract-source`, `source-semantic-check`, `build` and `validate-artifact`
-are executable contributions in this candidate. A flat existing-translation
-parser is tested against original fixtures, but translation import transport,
-explicit locale mapping, project candidates/conflicts and adoption are not yet
-implemented as plugin capabilities. Discovery outside the exact declared
+The `source-profile`, `translation-profile` and `build-profile` resources use
+SDK-owned declarations. Six contributions perform source extraction/checking,
+complete translation extraction/checking and locale building/artifact checking.
+The domain supplies translation data and filename evidence; application locale
+confirmation, current-project matching, candidates/conflicts, per-entry adoption
+and uncertain-outcome recovery remain application/Core integration work.
+Discovery outside the exact declared
 materials, source-update project adoption and final production cutover remain
 application integration work. This candidate does not complete SMAPI migration
 or claim a release, Windows runtime support, OS isolation or game compatibility.

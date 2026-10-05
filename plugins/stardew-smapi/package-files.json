@@ -6,6 +6,7 @@
     "components/smapi.mjs",
     "profiles/source-import.json",
     "profiles/build.json",
+    "profiles/translation-import.json",
     "LICENSE",
     "README.md",
     "PROVENANCE.md",
@@ -39,6 +40,18 @@
     {
       "source": "javascript/validate-artifact-check-input.mjs",
       "target": "sdk/validate-artifact-check-input.mjs"
+    },
+    {
+      "source": "javascript/validate-translation-extraction-input.mjs",
+      "target": "sdk/validate-translation-extraction-input.mjs"
+    },
+    {
+      "source": "javascript/validate-translation-extraction-check-input.mjs",
+      "target": "sdk/validate-translation-extraction-check-input.mjs"
+    },
+    {
+      "source": "javascript/validate-translation-exchange.mjs",
+      "target": "sdk/validate-translation-exchange.mjs"
     },
     {
       "source": "LICENSE",

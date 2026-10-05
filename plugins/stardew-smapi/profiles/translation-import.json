@@ -1,0 +1,23 @@
+{
+  "displayName": "Existing SMAPI translations",
+  "profile": {
+    "id": "smapi-i18n-flat",
+    "schemaVersion": 1,
+    "behaviorVersion": 1
+  },
+  "material": {
+    "logicalDirectory": "i18n",
+    "extension": "json",
+    "role": "translation",
+    "maxBytes": 131072
+  },
+  "extractor": "import-translations",
+  "checker": "translation-semantic-check",
+  "semanticRules": [
+    {
+      "id": "smapi.translation-semantics",
+      "schemaVersion": 1,
+      "behaviorVersion": 1
+    }
+  ]
+}

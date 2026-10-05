@@ -34,3 +34,10 @@ The current selected snapshot also includes generic BuildInput/ArtifactSet,
 ArtifactCheckInput/CheckResults, BuildDeclaration and BuildError, with generated
 JavaScript build declarations and standalone structural validators. The plugin
 uses these public contracts while retaining its own caption semantics.
+
+The selected producer also includes complete existing-translation input/proposal,
+independent required-check input and single-file Resource contracts. It supplies
+Rust strict receivers and generated JavaScript declarations/structural validators.
+SMAPI consumes these shapes without importing project state. The new snapshot
+stays within the same undistributed SDK alpha.1 batch; current-source matching,
+actual consent and adoption remain application responsibilities.
