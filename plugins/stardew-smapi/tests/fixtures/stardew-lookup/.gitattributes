@@ -1,0 +1,5 @@
+manifest.json -text
+i18n/default.json -text
+i18n/zh.json -text whitespace=cr-at-eol
+translation-oracle.json text eol=lf
+LICENSE -text

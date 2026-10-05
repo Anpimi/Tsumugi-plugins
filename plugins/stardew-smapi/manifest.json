@@ -1,0 +1,246 @@
+{
+  "protocolVersion": 1,
+  "plugin": {
+    "publisher": "org.tsumugi",
+    "id": "stardew-smapi",
+    "version": "0.1.0-alpha.1"
+  },
+  "permissions": [
+    {
+      "kind": "captured-input"
+    }
+  ],
+  "components": [
+    {
+      "id": "smapi-worker",
+      "scope": "project",
+      "runtime": "javascript",
+      "entrypoint": "components/component.mjs",
+      "dependencies": [],
+      "exit": {
+        "stopTimeoutMs": 1000,
+        "cleanupTimeoutMs": 1000
+      }
+    }
+  ],
+  "contributions": [
+    {
+      "id": "extract-source",
+      "componentId": "smapi-worker",
+      "contribution": {
+        "kind": "capability",
+        "declaration": {
+          "contract": {
+            "id": "stardew-smapi.extract",
+            "schemaVersion": 1,
+            "behaviorVersion": 1
+          },
+          "inputSchema": {
+            "id": "tsumugi.source-extraction-input",
+            "schemaVersion": 1,
+            "behaviorVersion": 1
+          },
+          "outputSchema": {
+            "id": "tsumugi.content-exchange",
+            "schemaVersion": 2,
+            "behaviorVersion": 1
+          },
+          "errorSchema": {
+            "id": "tsumugi.source-extraction-error",
+            "schemaVersion": 1,
+            "behaviorVersion": 1
+          },
+          "profiles": [
+            {
+              "id": "smapi-i18n-flat",
+              "schemaVersion": 1,
+              "behaviorVersion": 1
+            }
+          ],
+          "effect": "proposal",
+          "permissions": [
+            {
+              "kind": "captured-input"
+            }
+          ],
+          "limits": {
+            "maxInputBytes": 2097152,
+            "maxOutputBytes": 2097152,
+            "concurrency": 1,
+            "timeoutMs": 30000
+          }
+        }
+      }
+    },
+    {
+      "id": "source-semantic-check",
+      "componentId": "smapi-worker",
+      "contribution": {
+        "kind": "capability",
+        "declaration": {
+          "contract": {
+            "id": "stardew-smapi.source-check",
+            "schemaVersion": 1,
+            "behaviorVersion": 1
+          },
+          "inputSchema": {
+            "id": "tsumugi.source-extraction-check-input",
+            "schemaVersion": 1,
+            "behaviorVersion": 1
+          },
+          "outputSchema": {
+            "id": "tsumugi.check-results",
+            "schemaVersion": 1,
+            "behaviorVersion": 1
+          },
+          "errorSchema": {
+            "id": "tsumugi.source-extraction-error",
+            "schemaVersion": 1,
+            "behaviorVersion": 1
+          },
+          "profiles": [
+            {
+              "id": "smapi-i18n-flat",
+              "schemaVersion": 1,
+              "behaviorVersion": 1
+            }
+          ],
+          "effect": "read-only",
+          "permissions": [
+            {
+              "kind": "captured-input"
+            }
+          ],
+          "limits": {
+            "maxInputBytes": 4194304,
+            "maxOutputBytes": 2097152,
+            "concurrency": 1,
+            "timeoutMs": 30000
+          }
+        }
+      }
+    },
+    {
+      "id": "build",
+      "componentId": "smapi-worker",
+      "contribution": {
+        "kind": "capability",
+        "declaration": {
+          "contract": {
+            "id": "stardew-smapi.locale-build",
+            "schemaVersion": 1,
+            "behaviorVersion": 1
+          },
+          "inputSchema": {
+            "id": "tsumugi.build-input",
+            "schemaVersion": 1,
+            "behaviorVersion": 1
+          },
+          "outputSchema": {
+            "id": "tsumugi.artifact-set",
+            "schemaVersion": 1,
+            "behaviorVersion": 1
+          },
+          "errorSchema": {
+            "id": "tsumugi.build-error",
+            "schemaVersion": 1,
+            "behaviorVersion": 1
+          },
+          "profiles": [
+            {
+              "id": "smapi-i18n-flat",
+              "schemaVersion": 1,
+              "behaviorVersion": 1
+            }
+          ],
+          "effect": "proposal",
+          "permissions": [
+            {
+              "kind": "captured-input"
+            }
+          ],
+          "limits": {
+            "maxInputBytes": 4194304,
+            "maxOutputBytes": 2097152,
+            "concurrency": 1,
+            "timeoutMs": 30000
+          }
+        }
+      }
+    },
+    {
+      "id": "validate-artifact",
+      "componentId": "smapi-worker",
+      "contribution": {
+        "kind": "capability",
+        "declaration": {
+          "contract": {
+            "id": "stardew-smapi.artifact-check",
+            "schemaVersion": 1,
+            "behaviorVersion": 1
+          },
+          "inputSchema": {
+            "id": "tsumugi.artifact-check-input",
+            "schemaVersion": 1,
+            "behaviorVersion": 1
+          },
+          "outputSchema": {
+            "id": "tsumugi.check-results",
+            "schemaVersion": 1,
+            "behaviorVersion": 1
+          },
+          "errorSchema": {
+            "id": "tsumugi.build-error",
+            "schemaVersion": 1,
+            "behaviorVersion": 1
+          },
+          "profiles": [
+            {
+              "id": "smapi-i18n-flat",
+              "schemaVersion": 1,
+              "behaviorVersion": 1
+            }
+          ],
+          "effect": "read-only",
+          "permissions": [
+            {
+              "kind": "captured-input"
+            }
+          ],
+          "limits": {
+            "maxInputBytes": 4194304,
+            "maxOutputBytes": 2097152,
+            "concurrency": 1,
+            "timeoutMs": 30000
+          }
+        }
+      }
+    },
+    {
+      "id": "source-profile",
+      "componentId": "smapi-worker",
+      "contribution": {
+        "kind": "resource",
+        "schema": {
+          "id": "tsumugi.source-import-declaration",
+          "schemaVersion": 1,
+          "behaviorVersion": 1
+        },
+        "path": "profiles/source-import.json"
+      }
+    },
+    {
+      "id": "build-profile",
+      "componentId": "smapi-worker",
+      "contribution": {
+        "kind": "resource",
+        "schema": {
+          "id": "tsumugi.build-declaration",
+          "schemaVersion": 1,
+          "behaviorVersion": 1
+        },
+        "path": "profiles/build.json"
+      }
+    }
+  ]
+}

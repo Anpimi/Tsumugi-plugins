@@ -1,4 +1,6 @@
 .cache/
+node_modules/
+.generated/
 target/
 .worktrees/
 .DS_Store

@@ -6,10 +6,11 @@ versioned artifacts. Tsumugi owns the public SDK, process Host and project engin
 Plugins do not depend on Core, the desktop frontend or a private workspace.
 
 The repository provides a pinned SDK source artifact, an independent Rust consumer
-check, and a runnable WebVTT JavaScript package for extraction, locale building
-and artifact checking. SMAPI migration remains pending. The WebVTT package is an
-experimental candidate; desktop selection, project adoption and the full domain
-cutover remain application integration work. No plugin release is claimed.
+check, and independent WebVTT and SMAPI JavaScript candidates for source extraction,
+separate source semantics, locale building and separate artifact checking. SMAPI
+translation decoding has fixture coverage, while translation transport, project
+matching/adoption and full domain cutover remain application integration work.
+These packages are experimental candidates; no plugin release is claimed.
 
 ## Build the independent SDK consumer
 
@@ -60,6 +61,12 @@ See the [package contracts](plugins/webvtt/docs/contracts.md) and
 [Host boundary](plugins/webvtt/README.md#host-integration-boundary).
 
 ## Package ownership
+
+The [SMAPI package](plugins/stardew-smapi/README.md) uses a frozen pnpm dependency
+and explicit parser preparation before packaging. Its prebuilt tree carries all
+parser runtime files and licenses, rather than loading developer `node_modules`.
+Its source, build and check capabilities pair with the public Host using the same
+SDK shapes as WebVTT. Building a package does not complete desktop migration.
 
 - `plugins/stardew-smapi/`: SMAPI discovery, source and translation import,
   identity/matching, checks, building and artifact verification.

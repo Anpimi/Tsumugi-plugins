@@ -1,0 +1,21 @@
+{
+  "displayName": "SMAPI flat translations",
+  "profile": {
+    "id": "smapi-i18n-flat",
+    "schemaVersion": 1,
+    "behaviorVersion": 1
+  },
+  "builder": "build",
+  "checker": "validate-artifact",
+  "outputLimits": {
+    "maxArtifacts": 1,
+    "maxTotalBytes": 1048576
+  },
+  "artifactRules": [
+    {
+      "id": "smapi.artifact-conformance",
+      "schemaVersion": 1,
+      "behaviorVersion": 1
+    }
+  ]
+}
