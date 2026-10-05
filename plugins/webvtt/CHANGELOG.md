@@ -7,6 +7,9 @@ This project follows Semantic Versioning. The first package is experimental.
 
 ### Added
 
+- Package-owned SDK source-import resource fixing required material, caption
+  profile, independent extraction/checking and mandatory revision/check policy.
+
 - Mandatory fixed-source semantic checking through SDK check requirements/results,
   including a literal source oracle and rejection of forged coverage, ranges,
   identities, display evidence, basis blocks and policy.

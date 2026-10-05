@@ -215,6 +215,19 @@
           }
         }
       }
+    },
+    {
+      "id": "source-profile",
+      "componentId": "caption-worker",
+      "contribution": {
+        "kind": "resource",
+        "schema": {
+          "id": "tsumugi.source-import-declaration",
+          "schemaVersion": 1,
+          "behaviorVersion": 1
+        },
+        "path": "profiles/source-import.json"
+      }
     }
   ]
 }

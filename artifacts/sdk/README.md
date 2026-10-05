@@ -23,3 +23,9 @@ unmatched files. The current snapshot includes the Rust source-extraction API,
 generated JavaScript content declarations, standalone extraction and source-check
 validators, original identity display evidence and fixed check-selection contracts,
 with their license notices. Packaged plugins derive those helpers from this artifact.
+
+The selected snapshot also supplies the SDK-owned source-import resource types,
+strict receiver and generated schema. A package resource fixes material and
+independent provider/check policy, while directory and current execution authority
+remain application-owned. The added resource stays in this same unreleased
+experimental package batch and does not establish a completed desktop migration.

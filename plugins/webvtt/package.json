@@ -19,6 +19,7 @@
     "README.md",
     "CHANGELOG.md",
     "CHANGELOG.zh-CN.md",
-    "package-files.json"
+    "package-files.json",
+    "profiles"
   ]
 }

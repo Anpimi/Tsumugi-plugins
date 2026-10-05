@@ -52,6 +52,14 @@ installation script runs inside a captured package.
 
 ## Host integration boundary
 
+The package Resource `source-profile` selects the SDK source-import declaration
+in `profiles/source-import.json`. It fixes `source.vtt` with the 128 KiB limit,
+the exact caption profile, independent extractor/checker contributions, cue-basis
+revision policy and mandatory source-semantic rule before extraction. The Host
+reads this immutable resource without executing the component. The application
+still selects the directory/runtime and separately authorizes each fixed attempt;
+the resource grants no file access or execution permission.
+
 `components/component.mjs` exports the SDK `activate(api)` facade. It registers
 exactly one selected contribution: `extract-source`, `source-semantic-check`,
 `build` or `validate-artifact`.

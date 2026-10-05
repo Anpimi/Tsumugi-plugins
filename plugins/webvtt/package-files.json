@@ -17,7 +17,8 @@
     "CHANGELOG.md",
     "CHANGELOG.zh-CN.md",
     "package.json",
-    "package-files.json"
+    "package-files.json",
+    "profiles/source-import.json"
   ],
   "sdkFiles": [
     {
