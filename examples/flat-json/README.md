@@ -4,7 +4,7 @@ This independent plugin example consumes the repository's verified public SDK
 archive. It imports no Core, database, desktop, Cordis or private workspace code.
 Its `NativeComponent` uses the SDK entry point for framing, identity, cancellation
 and disposal. One typed [definition](src/definition.rs) generates the manifest
-and Source/Review/Build Resources; authors do not maintain another wire codec or
+and Source/Translation/Review/Build Resources; authors do not maintain another wire codec or
 a duplicate JSON manifest. The plugin identity is `org.tsumugi.examples / flat-json`.
 This is an experimental, unreleased `0.1.0-alpha.1` example, not a bundled plugin.
 
@@ -42,6 +42,19 @@ checker reparses actual output and compares every decoded key/value, role,
 BOM and fixed SDK association. It does not call the builder as an oracle;
 formatting differences alone are allowed. Broken/omitted/extra text remains a
 blocking finding even when an attacker recalculates the artifact hash.
+
+Existing translations use one captured `translations/<target-language>.json`
+under the same 128 KiB/2,000-message bounds. Filename spelling must exactly match
+the explicitly confirmed project target; the `flat-json:source` namespace and
+`flat-json.message-key` policy must match the current adopted source scope.
+Keys remain exact and case-sensitive; decoded Unicode, empty strings, quoted
+UTF-8 ranges, complete file bytes and entry order are preserved. An empty object
+retains a complete zero-entry proposal; no project unit or revision is invented.
+The independently invoked `flat-json.translation-semantics` checker reparses the
+whole original file and verifies language, keys, values, display evidence, ranges
+and coverage without calling extraction. Core owns current-source matching,
+unmatched rows, selection conflicts, per-entry adoption and uncertain outcomes.
+The wire language confirmation is evidence and grants no execution or adoption.
 
 Only captured inputs are requested. The worker never opens source/output paths,
 installs packages, performs network requests or obtains project write handles.

@@ -141,7 +141,7 @@ fn assert_bound(requirements: &[CheckRequirement], results: &[CheckResult]) {
 }
 
 #[test]
-fn generated_metadata_binds_all_five_capabilities_and_three_resources() {
+fn generated_metadata_binds_all_seven_capabilities_and_four_resources() {
     let files = metadata().unwrap();
     let manifest = parse_manifest(files["manifest.json"].as_bytes()).unwrap();
     let digest = payload_digest("synthetic captured package");
@@ -171,7 +171,20 @@ fn generated_metadata_binds_all_five_capabilities_and_three_resources() {
         build.checker.provider.contribution_id,
         Operation::ArtifactCheck.id()
     );
-    assert_eq!(manifest.manifest().contributions.len(), 8);
+    let translation =
+        parse_translation_import_declaration(files["profiles/translation-import.json"].as_bytes())
+            .unwrap()
+            .bind(&manifest, &digest)
+            .unwrap();
+    assert_eq!(
+        translation.extractor.provider.contribution_id,
+        Operation::TranslationExtract.id()
+    );
+    assert_eq!(
+        translation.checker.provider.contribution_id,
+        Operation::TranslationCheck.id()
+    );
+    assert_eq!(manifest.manifest().contributions.len(), 11);
     assert_eq!(
         manifest.manifest().components[0].runtime,
         RuntimeKind::NativeWorker
@@ -182,7 +195,152 @@ fn generated_metadata_binds_all_five_capabilities_and_three_resources() {
         include_str!("../../../sdk.lock.json")
     );
     let recipe: serde_json::Value = serde_json::from_str(&files["package-files.json"]).unwrap();
-    assert_eq!(recipe["files"].as_array().unwrap().len(), 12);
+    assert_eq!(recipe["files"].as_array().unwrap().len(), 13);
+}
+
+fn translation_input(text: &str) -> TranslationExtractionInput {
+    TranslationExtractionInput {
+        profile: profile(),
+        import_id: "captured-import".into(),
+        source_set_id: "current-source".into(),
+        source_snapshot_id: "current-snapshot".into(),
+        target_language: "zh-CN".into(),
+        language_evidence: TranslationLanguageEvidence::UserConfirmed,
+        native_scope: TranslationNativeScope {
+            namespace: "flat-json:source".into(),
+            policy: identity_policy(),
+        },
+        artifacts: vec![CapturedTextArtifact {
+            id: "captured-translation".into(),
+            logical_path: "translations/zh-CN.json".into(),
+            role: "translation".into(),
+            sha256: payload_digest(text),
+            utf8: text.into(),
+        }],
+    }
+}
+fn translation_check_input(input: TranslationExtractionInput) -> TranslationExtractionCheckInput {
+    let proposal = extract_translations(&input, &|| false).unwrap();
+    let requirement = requirement(
+        Operation::TranslationCheck,
+        TRANSLATION_RULE,
+        vec![input.import_id.clone()],
+    );
+    TranslationExtractionCheckInput {
+        input,
+        proposal,
+        requirements: vec![requirement],
+    }
+}
+
+#[test]
+fn translation_extraction_retains_exact_unicode_empty_values_and_literal_ranges() {
+    let raw = "\u{feff}{\r\n \"\\u0061\": \"你好 {name} 👩🏽‍💻 e\u{301}\",\r\n \"empty\": \"\", \"ghost\": \"unmatched\"\r\n}\n";
+    let input = translation_input(raw);
+    let proposal = extract_translations(&input, &|| false).unwrap();
+    validate_translation_extraction(&input, &proposal).unwrap();
+    assert_eq!(proposal.artifacts, input.artifacts);
+    assert_eq!(proposal.declared_language, "zh-CN");
+    assert_eq!(
+        proposal
+            .entries
+            .iter()
+            .map(|entry| entry.text.as_str())
+            .collect::<Vec<_>>(),
+        ["你好 {name} 👩🏽‍💻 e\u{301}", "", "unmatched"]
+    );
+    assert_eq!(
+        proposal
+            .entries
+            .iter()
+            .map(|entry| entry.native_identity.value.as_str())
+            .collect::<Vec<_>>(),
+        ["a", "empty", "ghost"]
+    );
+    for entry in &proposal.entries {
+        let literal = &raw[entry.source.range.start as usize..entry.source.range.end as usize];
+        assert_eq!(serde_json::from_str::<String>(literal).unwrap(), entry.text);
+        assert!(entry.native_identity.display.source.is_none());
+    }
+    let check = translation_check_input(input);
+    let checked = translation_check(&check, &|| false).unwrap();
+    assert_eq!(findings(&checked), 0);
+    assert_bound(&check.requirements, &checked);
+}
+
+#[test]
+fn translation_checker_reparses_original_material_and_refuses_forged_semantics() {
+    let original = translation_check_input(translation_input("{\"a\":\"译文\",\"empty\":\"\"}"));
+    for scenario in 0..6 {
+        let mut check = original.clone();
+        match scenario {
+            0 => check.proposal.entries[0].text = "forged".into(),
+            1 => check.proposal.entries[0].native_identity.value = "another".into(),
+            2 => {
+                check.proposal.entries.pop();
+                check.proposal.order.pop();
+            }
+            3 => check.proposal.order.reverse(),
+            4 => check.proposal.declared_language = "ja".into(),
+            5 => {
+                check.proposal.entries[0].native_identity.display.value =
+                    "unverified display".into()
+            }
+            _ => unreachable!(),
+        }
+        check.validate().unwrap();
+        let result = translation_check(&check, &|| false).unwrap();
+        assert_eq!(findings(&result), 1, "scenario {scenario}");
+        assert_bound(&check.requirements, &result);
+    }
+}
+
+#[test]
+fn translation_empty_file_remains_complete_zero_entry_evidence() {
+    let input = translation_input("\u{feff} { }\r\n");
+    let check = translation_check_input(input);
+    assert!(check.proposal.entries.is_empty());
+    assert!(check.proposal.order.is_empty());
+    assert_eq!(check.proposal.artifacts, check.input.artifacts);
+    assert_eq!(findings(&translation_check(&check, &|| false).unwrap()), 0);
+    assert!(
+        extract(&source("{}"), &|| false).is_err(),
+        "source establishment still requires messages"
+    );
+}
+
+#[test]
+fn translation_refuses_wrong_scope_locale_role_duplicates_structure_and_limits() {
+    for scenario in 0..7 {
+        let mut input = translation_input("{\"a\":\"translated\"}");
+        match scenario {
+            0 => input.native_scope.namespace = "another-domain".into(),
+            1 => input.native_scope.policy = contract("another-policy"),
+            2 => input.artifacts[0].logical_path = "translations/zh-cn.json".into(),
+            3 => input.artifacts[0].role = "source".into(),
+            4 => input.artifacts[0].utf8 = "{\"a\":\"one\",\"\\u0061\":\"duplicate\"}".into(),
+            5 => input.artifacts[0].utf8 = "{\"a\":{\"nested\":\"unsupported\"}}".into(),
+            6 => {
+                input.artifacts[0].utf8 = format!("{{\"a\":\"{}\"}}", "x".repeat(MAX_CATALOG_BYTES))
+            }
+            _ => unreachable!(),
+        }
+        input.artifacts[0].sha256 = payload_digest(&input.artifacts[0].utf8);
+        assert!(
+            extract_translations(&input, &|| false).is_err(),
+            "scenario {scenario}"
+        );
+    }
+    let input = translation_input("{\"a\":\"translated\"}");
+    assert_eq!(
+        extract_translations(&input, &|| true).unwrap_err(),
+        Error::Cancelled
+    );
+    let check = translation_check_input(input);
+    assert_eq!(
+        translation_check(&check, &|| true).unwrap_err(),
+        Error::Cancelled
+    );
 }
 
 #[test]

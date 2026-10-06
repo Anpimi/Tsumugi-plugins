@@ -51,6 +51,7 @@ struct Message {
 struct CatalogVisitor<'a> {
     original: &'a str,
     cancel: Cancel<'a>,
+    allow_empty: bool,
 }
 impl<'de> Visitor<'de> for CatalogVisitor<'_> {
     type Value = Vec<Message>;
@@ -93,13 +94,16 @@ impl<'de> Visitor<'de> for CatalogVisitor<'_> {
                 literal: range(start, end),
             });
         }
-        if entries.is_empty() {
+        if entries.is_empty() && !self.allow_empty {
             return Err(de::Error::custom("an empty catalog has no messages"));
         }
         Ok(entries)
     }
 }
 fn catalog(text: &str, cancel: Cancel<'_>) -> Result<Vec<Message>, Error> {
+    parse_catalog(text, cancel, false)
+}
+fn parse_catalog(text: &str, cancel: Cancel<'_>, allow_empty: bool) -> Result<Vec<Message>, Error> {
     current(cancel)?;
     if text.len() > MAX_CATALOG_BYTES {
         return Err(Error::LimitExceeded);
@@ -109,6 +113,7 @@ fn catalog(text: &str, cancel: Cancel<'_>) -> Result<Vec<Message>, Error> {
     let entries = parser.deserialize_map(CatalogVisitor {
         original: text,
         cancel,
+        allow_empty,
     });
     current(cancel)?;
     let entries = entries.map_err(|_| Error::InvalidSource)?;
@@ -363,6 +368,135 @@ pub fn source_check(
     current(cancel)?;
     Ok(vec![result(&input.requirements[0], findings)])
 }
+
+fn captured_translations(
+    input: &TranslationExtractionInput,
+    cancel: Cancel<'_>,
+) -> Result<Vec<Message>, Error> {
+    current(cancel)?;
+    input.validate().map_err(|_| Error::InvalidInput)?;
+    if input.profile != profile() {
+        return Err(Error::UnsupportedProfile);
+    }
+    if input.native_scope.namespace != "flat-json:source"
+        || input.native_scope.policy != identity_policy()
+        || input.artifacts.len() != 1
+        || input.artifacts[0].logical_path != format!("translations/{}.json", input.target_language)
+        || input.artifacts[0].role != "translation"
+    {
+        return Err(Error::UnsupportedStructure);
+    }
+    // The same exact-key parser admits an empty translation file, while source
+    // establishment still requires messages. No project match is inferred here.
+    let messages = parse_catalog(&input.artifacts[0].utf8, cancel, true).map_err(|error| {
+        if error == Error::InvalidSource {
+            Error::InvalidTarget
+        } else {
+            error
+        }
+    })?;
+    for message in &messages {
+        placeholders(&message.text, cancel)?;
+    }
+    Ok(messages)
+}
+
+pub fn extract_translations(
+    input: &TranslationExtractionInput,
+    cancel: Cancel<'_>,
+) -> Result<TranslationExchange, Error> {
+    let messages = captured_translations(input, cancel)?;
+    let mut proposal = TranslationExchange {
+        profile: input.profile.clone(),
+        import_id: input.import_id.clone(),
+        source_set_id: input.source_set_id.clone(),
+        source_snapshot_id: input.source_snapshot_id.clone(),
+        target_language: input.target_language.clone(),
+        declared_language: input.target_language.clone(),
+        language_evidence: input.language_evidence,
+        native_scope: input.native_scope.clone(),
+        artifacts: input.artifacts.clone(),
+        entries: vec![],
+        order: vec![],
+    };
+    for (index, message) in messages.into_iter().enumerate() {
+        current(cancel)?;
+        let id = format!("translation-{index}");
+        proposal.order.push(id.clone());
+        proposal.entries.push(ImportedTranslation {
+            id,
+            text: message.text,
+            source: SourceReference {
+                artifact_id: input.artifacts[0].id.clone(),
+                range: message.literal,
+            },
+            native_identity: NativeIdentityEvidence {
+                namespace: input.native_scope.namespace.clone(),
+                value: message.key.clone(),
+                policy: input.native_scope.policy.clone(),
+                display: NativeIdentityDisplay {
+                    value: message.key,
+                    source: None,
+                },
+            },
+        });
+    }
+    validate_translation_extraction(input, &proposal).map_err(|_| Error::LimitExceeded)?;
+    current(cancel)?;
+    Ok(proposal)
+}
+
+pub fn translation_check(
+    input: &TranslationExtractionCheckInput,
+    cancel: Cancel<'_>,
+) -> Result<Vec<CheckResult>, Error> {
+    current(cancel)?;
+    input.validate().map_err(|_| Error::InvalidInput)?;
+    if input.requirements.len() != 1
+        || !provider(
+            &input.requirements[0],
+            Operation::TranslationCheck,
+            TRANSLATION_RULE,
+        )
+    {
+        return Err(Error::InvalidInput);
+    }
+    // Independently reparse original bytes, never invoke the extraction path.
+    let messages = captured_translations(&input.input, cancel)?;
+    let proposal = &input.proposal;
+    let by_id: BTreeMap<_, _> = proposal
+        .entries
+        .iter()
+        .map(|entry| (&entry.id, entry))
+        .collect();
+    let mut faithful = proposal.declared_language == input.input.target_language
+        && proposal.entries.len() == messages.len()
+        && proposal.order.len() == messages.len();
+    for (index, message) in messages.iter().enumerate() {
+        current(cancel)?;
+        let entry = proposal.order.get(index).and_then(|id| by_id.get(id));
+        faithful &= entry.is_some_and(|entry| {
+            entry.text == message.text
+                && entry.source.artifact_id == input.input.artifacts[0].id
+                && entry.source.range == message.literal
+                && entry.native_identity.namespace == input.input.native_scope.namespace
+                && entry.native_identity.policy == input.input.native_scope.policy
+                && entry.native_identity.value == message.key
+                && entry.native_identity.display.value == message.key
+                && entry.native_identity.display.source.is_none()
+        });
+    }
+    current(cancel)?;
+    Ok(vec![result(
+        &input.requirements[0],
+        if faithful {
+            vec![]
+        } else {
+            vec![finding("translation-mismatch", &input.input.import_id)]
+        },
+    )])
+}
+
 fn qualified_source(source: &ContentExchange, cancel: Cancel<'_>) -> Result<Vec<Message>, Error> {
     source.validate().map_err(|_| Error::InvalidInput)?;
     let messages = captured(&material(source), cancel)?;

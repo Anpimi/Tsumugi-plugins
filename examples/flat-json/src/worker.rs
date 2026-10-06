@@ -41,6 +41,14 @@ impl NativeComponent for CatalogComponent {
                     .map_err(|_| catalog::Error::InvalidInput)
                     .and_then(|v| catalog::source_check(&v, &cancelled))
                     .map(|v| serde_json::to_string(&v).expect("typed checks serialize")),
+                Operation::TranslationExtract => parse_translation_extraction_input(bytes)
+                    .map_err(|_| catalog::Error::InvalidInput)
+                    .and_then(|v| catalog::extract_translations(&v, &cancelled))
+                    .map(|v| serde_json::to_string(&v).expect("typed translations serialize")),
+                Operation::TranslationCheck => parse_translation_extraction_check_input(bytes)
+                    .map_err(|_| catalog::Error::InvalidInput)
+                    .and_then(|v| catalog::translation_check(&v, &cancelled))
+                    .map(|v| serde_json::to_string(&v).expect("typed checks serialize")),
                 Operation::Review => parse_review_check_input(bytes)
                     .map_err(|_| catalog::Error::InvalidInput)
                     .and_then(|v| catalog::review(&v, &cancelled))
@@ -69,20 +77,21 @@ fn error_payload(op: Operation, error: catalog::Error) -> String {
     use catalog::Error::*;
     let detail = "The captured catalog operation does not satisfy this profile.".to_string();
     match op {
-        Operation::Extract | Operation::SourceCheck => {
-            serde_json::to_string(&SourceExtractionError {
-                code: match error {
-                    InvalidInput => SourceExtractionErrorCode::InvalidInput,
-                    UnsupportedProfile => SourceExtractionErrorCode::UnsupportedProfile,
-                    LimitExceeded => SourceExtractionErrorCode::LimitExceeded,
-                    Cancelled => SourceExtractionErrorCode::Cancelled,
-                    UnsupportedStructure => SourceExtractionErrorCode::UnsupportedStructure,
-                    _ => SourceExtractionErrorCode::InvalidSource,
-                },
-                artifact_id: None,
-                detail,
-            })
-        }
+        Operation::Extract
+        | Operation::SourceCheck
+        | Operation::TranslationExtract
+        | Operation::TranslationCheck => serde_json::to_string(&SourceExtractionError {
+            code: match error {
+                InvalidInput => SourceExtractionErrorCode::InvalidInput,
+                UnsupportedProfile => SourceExtractionErrorCode::UnsupportedProfile,
+                LimitExceeded => SourceExtractionErrorCode::LimitExceeded,
+                Cancelled => SourceExtractionErrorCode::Cancelled,
+                UnsupportedStructure => SourceExtractionErrorCode::UnsupportedStructure,
+                _ => SourceExtractionErrorCode::InvalidSource,
+            },
+            artifact_id: None,
+            detail,
+        }),
         Operation::Review => serde_json::to_string(&ReviewCheckError {
             code: match error {
                 InvalidInput => ReviewCheckErrorCode::InvalidInput,

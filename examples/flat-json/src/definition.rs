@@ -5,6 +5,7 @@ pub const COMPONENT: &str = "catalog-worker";
 pub const SOURCE_RULE: &str = "flat-json.source-semantics";
 pub const PLACEHOLDER_RULE: &str = "flat-json.placeholders";
 pub const ARTIFACT_RULE: &str = "flat-json.artifact-conformance";
+pub const TRANSLATION_RULE: &str = "flat-json.translation-semantics";
 pub const MAX_CATALOG_BYTES: usize = 131_072;
 
 pub fn contract(id: &str) -> ContractRef {
@@ -38,14 +39,18 @@ pub fn identity() -> PluginIdentity {
 pub enum Operation {
     Extract,
     SourceCheck,
+    TranslationExtract,
+    TranslationCheck,
     Review,
     Build,
     ArtifactCheck,
 }
 impl Operation {
-    pub const ALL: [Self; 5] = [
+    pub const ALL: [Self; 7] = [
         Self::Extract,
         Self::SourceCheck,
+        Self::TranslationExtract,
+        Self::TranslationCheck,
         Self::Review,
         Self::Build,
         Self::ArtifactCheck,
@@ -54,6 +59,8 @@ impl Operation {
         match self {
             Self::Extract => "extract-source",
             Self::SourceCheck => "source-semantic-check",
+            Self::TranslationExtract => "import-translations",
+            Self::TranslationCheck => "translation-semantic-check",
             Self::Review => "review-check",
             Self::Build => "build",
             Self::ArtifactCheck => "validate-artifact",
@@ -85,6 +92,20 @@ impl Operation {
                 review_check_error_contract(),
                 EffectKind::ReadOnly,
             ),
+            Self::TranslationExtract => (
+                "flat-json.translation-extract",
+                translation_extraction_input_contract(),
+                translation_exchange_contract(),
+                source_extraction_error_contract(),
+                EffectKind::Proposal,
+            ),
+            Self::TranslationCheck => (
+                "flat-json.translation-check",
+                translation_extraction_check_input_contract(),
+                check_results_contract(),
+                source_extraction_error_contract(),
+                EffectKind::ReadOnly,
+            ),
             Self::Build => (
                 "flat-json.locale-build",
                 build_input_contract(),
@@ -109,7 +130,7 @@ impl Operation {
             effect,
             permissions: vec![PermissionRequest::CapturedInput],
             limits: CapabilityLimits {
-                max_input_bytes: if self == Self::Extract {
+                max_input_bytes: if matches!(self, Self::Extract | Self::TranslationExtract) {
                     MAX_EXCHANGE_BYTES as u32
                 } else {
                     MAX_INVOCATION_PAYLOAD_BYTES as u32
@@ -154,6 +175,21 @@ pub fn build_declaration() -> BuildDeclaration {
         artifact_rules: vec![contract(ARTIFACT_RULE)],
     }
 }
+pub fn translation_declaration() -> TranslationImportDeclaration {
+    TranslationImportDeclaration {
+        display_name: "Existing JSON message translations".into(),
+        profile: profile(),
+        material: TranslationMaterialDeclaration {
+            logical_directory: "translations".into(),
+            extension: "json".into(),
+            role: "translation".into(),
+            max_bytes: MAX_CATALOG_BYTES as u32,
+        },
+        extractor: Operation::TranslationExtract.id().into(),
+        checker: Operation::TranslationCheck.id().into(),
+        semantic_rules: vec![contract(TRANSLATION_RULE)],
+    }
+}
 pub fn review_declaration() -> ReviewDeclaration {
     ReviewDeclaration {
         profile: profile(),
@@ -196,6 +232,11 @@ pub fn manifest() -> PluginManifest {
             "review-profile",
             review_declaration_contract(),
             "profiles/review.json",
+        ),
+        (
+            "translation-profile",
+            translation_import_declaration_contract(),
+            "profiles/translation-import.json",
         ),
     ] {
         contributions.push(ContributionDeclaration {
@@ -246,11 +287,13 @@ pub fn metadata()
     source_declaration().validate()?;
     build_declaration().validate()?;
     review_declaration().validate()?;
+    translation_declaration().validate()?;
     let files = [
         "manifest.json",
         "profiles/source-import.json",
         "profiles/build.json",
         "profiles/review.json",
+        "profiles/translation-import.json",
         "bin/flat-json-worker",
         "README.md",
         "LICENSE",
@@ -273,6 +316,10 @@ pub fn metadata()
         (
             "profiles/review.json",
             serde_json::to_string_pretty(&review_declaration())?,
+        ),
+        (
+            "profiles/translation-import.json",
+            serde_json::to_string_pretty(&translation_declaration())?,
         ),
         (
             "sdk/lock.json",
