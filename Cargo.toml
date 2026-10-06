@@ -1,5 +1,5 @@
 [workspace]
-members = ["tooling/sdk-probe"]
+members = ["tooling/sdk-probe", "examples/flat-json"]
 resolver = "3"
 
 [workspace.package]

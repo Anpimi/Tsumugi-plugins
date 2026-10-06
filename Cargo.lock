@@ -226,6 +226,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "tsumugi-flat-json-example"
+version = "0.1.0-alpha.1"
+dependencies = [
+ "serde",
+ "serde_json",
+ "sha2",
+ "tsumugi-plugin-sdk",
+]
+
+[[package]]
 name = "tsumugi-plugin-sdk"
 version = "0.1.0-alpha.1"
 dependencies = [

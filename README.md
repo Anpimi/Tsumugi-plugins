@@ -66,6 +66,13 @@ See the [package contracts](plugins/webvtt/docs/contracts.md) and
 
 ## Package ownership
 
+The [Rust JSON message catalog example](examples/flat-json/README.md) consumes
+the same pinned public SDK without Core or desktop dependencies. It implements
+source extraction, independent source/QA/artifact checks and locale building;
+one typed definition generates its manifest/resources, and the SDK supplies the
+Native Worker protocol. It is an independent development example, not a bundled
+plugin or a replacement for either existing domain's migration.
+
 The [SMAPI package](plugins/stardew-smapi/README.md) uses a frozen pnpm dependency
 and explicit parser preparation before packaging. Its prebuilt tree carries all
 parser runtime files and licenses, rather than loading developer `node_modules`.
