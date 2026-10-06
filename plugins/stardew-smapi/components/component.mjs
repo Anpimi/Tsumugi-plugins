@@ -1,3 +1,4 @@
+import validateReviewCheckInput from '../sdk/validate-review-check-input.mjs';
 import validateBuildInput from '../sdk/validate-build-input.mjs';
 import validateArtifactCheckInput from '../sdk/validate-artifact-check-input.mjs';
 import validateSourceExtractionInput from '../sdk/validate-source-extraction-input.mjs';
@@ -5,7 +6,7 @@ import validateSourceExtractionCheckInput from '../sdk/validate-source-extractio
 import validateTranslationExtractionInput from '../sdk/validate-translation-extraction-input.mjs';
 import validateTranslationExtractionCheckInput from '../sdk/validate-translation-extraction-check-input.mjs';
 import validateTranslationExchange from '../sdk/validate-translation-exchange.mjs';
-import { SmapiError, MAX_PAYLOAD_BYTES, MAX_CHECK_BYTES, extractSource, checkSourceSemantics, extractTranslations, checkTranslationSemantics, buildLocale, checkArtifact, encoded } from './smapi.mjs';
+import { SmapiError, MAX_PAYLOAD_BYTES, MAX_CHECK_BYTES, extractSource, checkSourceSemantics, extractTranslations, checkTranslationSemantics, buildLocale, checkArtifact, checkReview, encoded } from './smapi.mjs';
 
 /** @typedef {import('../../../.cache/sdk/tsumugi-plugin-sdk-0.1.0-alpha.1/javascript/component.js').ComponentModule} ComponentModule */
 /** @typedef {import('../../../.cache/sdk/tsumugi-plugin-sdk-0.1.0-alpha.1/javascript/content.js').SourceExtractionError} SourceExtractionError */
@@ -14,6 +15,7 @@ const extractionCodes = new Set(['invalid-input', 'unsupported-profile', 'invali
 const buildCodes = new Set(['invalid-input', 'unsupported-profile', 'invalid-target', 'invalid-artifact', 'limit-exceeded', 'cancelled']);
 const buildCode = code => ({ 'invalid-payload': 'invalid-target', 'invalid-output': 'invalid-artifact' }[code] ?? code);
 const operations = new Map([
+  ['review-check', { contract: 'stardew-smapi.review-check', input: 'tsumugi.review-check-input', handler: checkReview }],
   ['extract-source', { contract: 'stardew-smapi.extract', input: 'tsumugi.source-extraction-input', handler: extractSource }],
   ['source-semantic-check', { contract: 'stardew-smapi.source-check', input: 'tsumugi.source-extraction-check-input', handler: checkSourceSemantics }],
   ['import-translations', { contract: 'stardew-smapi.translation-extract', input: 'tsumugi.translation-extraction-input', handler: extractTranslations }],
@@ -57,6 +59,9 @@ const component = {
         if ((id === 'build' && !validateBuildInput(input)) || (id === 'validate-artifact' && !validateArtifactCheckInput(input))) {
           throw new SmapiError('invalid-input', 'Operation input does not match the SDK schema.');
         }
+        if (id === 'review-check' && !validateReviewCheckInput(input)) {
+          throw new SmapiError('invalid-input', 'Review input does not match the SDK schema.');
+        }
         const output = operation.handler(input, metadata.signal);
         if (id === 'import-translations' && !validateTranslationExchange(output)) {
           throw new Error('Translation handler result violates the SDK structure.');
@@ -65,6 +70,13 @@ const component = {
         return { kind: 'succeeded', utf8: encoded(output) };
       } catch (error) {
         if (!(error instanceof SmapiError)) throw error;
+        if (id === 'review-check') {
+          const code = error.code === 'invalid-payload' ? 'invalid-translation' : error.code;
+          const supported = new Set(['invalid-input', 'unsupported-profile', 'invalid-source', 'invalid-translation', 'unsupported-structure', 'limit-exceeded', 'cancelled']);
+          const unit = input?.selections?.[0]?.unitId;
+          return { kind: 'failed', utf8: encoded({ code: supported.has(code) ? code : 'invalid-input',
+            unitId: typeof unit === 'string' && /^[A-Za-z0-9._:/-]{1,128}$/.test(unit) ? unit : null, detail: error.detail }) };
+        }
         if (id === 'extract-source' || id === 'source-semantic-check' || id === 'import-translations' || id === 'translation-semantic-check') {
           const captured = id === 'source-semantic-check' ? input?.source : id === 'translation-semantic-check' ? input?.input : input;
           const artifactId = captured?.artifacts?.[0]?.id;

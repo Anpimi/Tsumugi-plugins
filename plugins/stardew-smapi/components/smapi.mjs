@@ -315,6 +315,83 @@ export function markers(text) {
   }
   return result;
 }
+
+export const REVIEW_RULES = Object.freeze([
+  Object.freeze({ rule: Object.freeze(contract('smapi.placeholders')), requiresTranslation: true }),
+  Object.freeze({ rule: Object.freeze(contract('smapi.format')), requiresTranslation: false }),
+]);
+
+/** Check only the captured selected scope. Core owns approval, terminology,
+ * explicit source fallback and waivers; this component cannot supply them. */
+export function checkReview(input, signal) {
+  guard(signal); encoded(input, MAX_CHECK_BYTES); encoded(input.source);
+  const captured = capturedSource(input.source, signal);
+  if (!language(input.targetLanguage) || !Array.isArray(input.selections) || !input.selections.length
+    || input.selections.length > MAX_ENTRIES || !Array.isArray(input.requirements)
+    || input.requirements.length !== REVIEW_RULES.length) reject('invalid-input', 'Expected a fixed review scope and complete domain rules.');
+  const units = new Map(input.source.units.map(unit => [unit.id, unit]));
+  const selected = new Set();
+  for (const selection of input.selections) {
+    guard(signal); const unit = units.get(selection.unitId);
+    if (!unit || selected.has(selection.unitId) || unit.sourceRevisionId !== selection.sourceRevisionId
+      || (selection.translationText !== null && !validTarget(selection.translationText))) {
+      reject('invalid-input', 'Review selection does not match its captured unit, revision or text limit.');
+    }
+    selected.add(selection.unitId);
+  }
+  const anyMissing = input.selections.some(selection => selection.translationText === null);
+  const allMissing = input.selections.every(selection => selection.translationText === null);
+  const seen = new Set();
+  let selectedProvider;
+  for (const value of input.requirements) {
+    guard(signal); const declared = REVIEW_RULES.find(rule => exact(value.key?.rule, rule.rule.id));
+    const provider = value.key?.implementation?.provider;
+    if (!declared || seen.has(declared.rule.id) || value.key.implementation.kind !== 'plugin'
+      || provider?.plugin?.publisher !== 'org.tsumugi' || provider.plugin.id !== 'stardew-smapi' || provider.plugin.version !== '0.1.0-alpha.1'
+      || provider.componentId !== 'smapi-worker' || provider.contributionId !== 'review-check' || !digest(provider.packageDigest)
+      || (selectedProvider && selectedProvider !== provider.packageDigest)
+      || !digest(value.inputDigest) || !digest(value.scopeDigest) || value.mandatory !== true || value.waivable !== false
+      || !Array.isArray(value.targets) || value.targets.length !== selected.size
+      || new Set(value.targets).size !== selected.size || value.targets.some(target => !selected.has(target))) {
+      reject('invalid-input', 'Review requirement does not match its declared rule, provider or exact scope.');
+    }
+    if (value.notApplicable !== null && (!declared.requiresTranslation || !allMissing
+      || value.notApplicable?.code !== 'missing-translation' || !digest(value.notApplicable.basisDigest))) {
+      reject('invalid-input', 'Review applicability does not match the captured missing-text scope.');
+    }
+    selectedProvider = provider.packageDigest; seen.add(declared.rule.id);
+  }
+  const faithful = faithfulProposal(input.source, input.source, captured, signal);
+  const findings = new Map(REVIEW_RULES.map(rule => [rule.rule.id, []]));
+  let unavailableMarkers = false;
+  const control = /[\x00-\x08\x0b\x0c\x0e-\x1f\x7f-\x9f]/u;
+  for (const selection of input.selections) {
+    guard(signal); const source = units.get(selection.unitId).text; const text = selection.translationText;
+    const add = (rule, code) => findings.get(rule).push({ code, target: selection.unitId, severity: 'error' });
+    if (!faithful) add('smapi.format', 'source-mismatch');
+    const sourceMarkers = markers(source);
+    if (sourceMarkers === null) add('smapi.format', 'source-marker');
+    if (control.test(source)) add('smapi.format', 'source-control-character');
+    if (text === null) continue;
+    const targetMarkers = markers(text);
+    if (targetMarkers === null) add('smapi.format', 'translation-marker');
+    if (control.test(text)) add('smapi.format', 'control-character');
+    if (sourceMarkers === null || targetMarkers === null) unavailableMarkers = true;
+    else if (sourceMarkers.size !== targetMarkers.size || [...sourceMarkers].some(([name, count]) => targetMarkers.get(name) !== count)) {
+      add('smapi.placeholders', 'marker-mismatch');
+    }
+  }
+  const output = input.requirements.map(value => {
+    const isMarkers = value.key.rule.id === 'smapi.placeholders';
+    const outcome = isMarkers && allMissing && value.notApplicable !== null
+      ? { kind: 'not-applicable', basis: structuredClone(value.notApplicable) }
+      : isMarkers && (anyMissing || unavailableMarkers) ? { kind: 'unavailable' }
+        : { kind: 'completed', findings: findings.get(value.key.rule.id) };
+    return { key: structuredClone(value.key), inputDigest: value.inputDigest, scopeDigest: value.scopeDigest,
+      coveredTargets: [...value.targets], outcome };
+  });
+  guard(signal); encoded(output); return output;
+}
 const validTarget = text => typeof text === 'string' && text.isWellFormed() && Buffer.byteLength(text) <= MAX_TEXT_BYTES;
 // Project metadata owns registered/supported locales. At this domain boundary
 // also reject malformed or noncanonical spellings instead of emitting them as

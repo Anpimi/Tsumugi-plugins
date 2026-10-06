@@ -241,6 +241,67 @@
         },
         "path": "profiles/build.json"
       }
+    },
+    {
+      "id": "review-check",
+      "componentId": "caption-worker",
+      "contribution": {
+        "kind": "capability",
+        "declaration": {
+          "contract": {
+            "id": "webvtt.review-check",
+            "schemaVersion": 1,
+            "behaviorVersion": 1
+          },
+          "inputSchema": {
+            "id": "tsumugi.review-check-input",
+            "schemaVersion": 1,
+            "behaviorVersion": 1
+          },
+          "outputSchema": {
+            "id": "tsumugi.check-results",
+            "schemaVersion": 1,
+            "behaviorVersion": 1
+          },
+          "errorSchema": {
+            "id": "tsumugi.review-check-error",
+            "schemaVersion": 1,
+            "behaviorVersion": 1
+          },
+          "profiles": [
+            {
+              "id": "webvtt-captions",
+              "schemaVersion": 1,
+              "behaviorVersion": 1
+            }
+          ],
+          "effect": "read-only",
+          "permissions": [
+            {
+              "kind": "captured-input"
+            }
+          ],
+          "limits": {
+            "maxInputBytes": 4194304,
+            "maxOutputBytes": 2097152,
+            "concurrency": 1,
+            "timeoutMs": 30000
+          }
+        }
+      }
+    },
+    {
+      "id": "review-profile",
+      "componentId": "caption-worker",
+      "contribution": {
+        "kind": "resource",
+        "schema": {
+          "id": "tsumugi.review-declaration",
+          "schemaVersion": 1,
+          "behaviorVersion": 1
+        },
+        "path": "profiles/review.json"
+      }
     }
   ]
 }

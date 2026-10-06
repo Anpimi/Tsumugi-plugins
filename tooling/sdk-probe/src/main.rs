@@ -30,6 +30,38 @@ mod tests {
     use tsumugi_plugin_sdk::{ContractErrorCode, bind_capability};
 
     #[test]
+    fn standalone_review_consumer_binds_both_actual_package_resources() {
+        use tsumugi_plugin_sdk::*;
+        for (manifest, resource, expected) in [
+            (
+                include_bytes!("../../../plugins/stardew-smapi/manifest.json").as_slice(),
+                include_bytes!("../../../plugins/stardew-smapi/profiles/review.json").as_slice(),
+                "smapi.placeholders",
+            ),
+            (
+                include_bytes!("../../../plugins/webvtt/manifest.json").as_slice(),
+                include_bytes!("../../../plugins/webvtt/profiles/review.json").as_slice(),
+                "webvtt.source-structure",
+            ),
+        ] {
+            let manifest = parse_manifest(manifest).unwrap();
+            let declaration = parse_review_declaration(resource).unwrap();
+            let binding = declaration.bind(&manifest, &"a".repeat(64)).unwrap();
+            assert_eq!(binding.checker.provider.contribution_id, "review-check");
+            assert_eq!(binding.declaration.rules[0].rule.id, expected);
+            assert_eq!(
+                binding.checker.declaration.input_schema,
+                review_check_input_contract()
+            );
+            assert_eq!(
+                binding.checker.declaration.error_schema,
+                review_check_error_contract()
+            );
+            binding.validate().unwrap();
+        }
+    }
+
+    #[test]
     fn standalone_consumer_reads_the_pinned_sdk_and_exact_binding() {
         let manifest = parse_manifest(include_bytes!("../fixtures/manifest.json")).unwrap();
         let binding = bind_capability(&manifest, "inspect", &"a".repeat(64)).unwrap();

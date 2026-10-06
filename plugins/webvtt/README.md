@@ -69,7 +69,7 @@ acceptance even though the check completed.
 
 `components/component.mjs` exports the SDK `activate(api)` facade. It registers
 exactly one selected contribution: `extract-source`, `source-semantic-check`,
-`build` or `validate-artifact`.
+`build`, `validate-artifact` or `review-check`.
 The Host owns transport, identities, cancellation, deadlines and cleanup. The
 application independently approves package/runtime bytes, installs and loads
 them, chooses the exact contribution/profile, and supplies current execution
@@ -87,3 +87,25 @@ system APIs under its user account; facade restrictions are not a security sandb
 claim. Desktop selection, project adoption, full domain cutover and distribution
 have their own integration requirements. No fallback to an embedded parser is
 provided by this package.
+
+## Domain review checks
+
+The `review-profile` Resource declares the exact `review-check` capability and
+mandatory rule versions. Its SDK ReviewCheckInput retains complete original
+source evidence plus an explicit selected unit/revision/text scope. This checker
+runs separately from source extraction and checking actual built artifacts.
+It returns SDK CheckResults with exact captured keys, digests and target coverage.
+Missing selected text needs an explicitly captured N/A basis for a rule that
+depends on translation; source-only rules still run. Missing requirements, wrong
+versions/providers and out-of-scope selections refuse success.
+
+The package contributes `webvtt.source-structure` (original cue identity/basis
+and complete source fidelity) and `webvtt.payload` (the existing caption text
+limits, unsupported markup/entities, NUL, blank blocks and timing arrows).
+
+Core independently fixes its mandatory rules and owns manual approval, empty
+selected-translation policy, terminology, source-fallback decisions, waivers and
+release eligibility. Plugin checks cannot replace those rules or approve a
+release. Actual Core/Desktop Review integration remains in development. This
+remains the same unpublished plugin `0.1.0-alpha.1` batch, without a release or
+historical development-format migration.

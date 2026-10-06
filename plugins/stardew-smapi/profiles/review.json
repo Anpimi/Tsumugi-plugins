@@ -1,0 +1,26 @@
+{
+  "profile": {
+    "id": "smapi-i18n-flat",
+    "schemaVersion": 1,
+    "behaviorVersion": 1
+  },
+  "checker": "review-check",
+  "rules": [
+    {
+      "rule": {
+        "id": "smapi.placeholders",
+        "schemaVersion": 1,
+        "behaviorVersion": 1
+      },
+      "requiresTranslation": true
+    },
+    {
+      "rule": {
+        "id": "smapi.format",
+        "schemaVersion": 1,
+        "behaviorVersion": 1
+      },
+      "requiresTranslation": false
+    }
+  ]
+}

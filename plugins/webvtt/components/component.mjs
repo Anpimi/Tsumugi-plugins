@@ -1,8 +1,9 @@
+import validateReviewCheckInput from '../sdk/validate-review-check-input.mjs';
 import validateBuildInput from '../sdk/validate-build-input.mjs';
 import validateArtifactCheckInput from '../sdk/validate-artifact-check-input.mjs';
 import validateSourceExtractionInput from '../sdk/validate-source-extraction-input.mjs';
 import validateSourceExtractionCheckInput from '../sdk/validate-source-extraction-check-input.mjs';
-import { WebvttError, MAX_PAYLOAD_BYTES, MAX_SOURCE_CHECK_BYTES, extractSource, checkSourceSemantics, buildCaptions, checkArtifact, encoded } from './webvtt.mjs';
+import { WebvttError, MAX_PAYLOAD_BYTES, MAX_SOURCE_CHECK_BYTES, extractSource, checkSourceSemantics, buildCaptions, checkArtifact, checkReview, encoded } from './webvtt.mjs';
 
 /** @typedef {import('../../../.cache/sdk/tsumugi-plugin-sdk-0.1.0-alpha.1/javascript/component.js').ComponentModule} ComponentModule */
 /** @typedef {import('../../../.cache/sdk/tsumugi-plugin-sdk-0.1.0-alpha.1/javascript/content.js').SourceExtractionError} SourceExtractionError */
@@ -11,6 +12,7 @@ const extractionCodes = new Set(['invalid-input', 'unsupported-profile', 'invali
 const buildCodes = new Set(['invalid-input', 'unsupported-profile', 'invalid-target', 'invalid-artifact', 'limit-exceeded', 'cancelled']);
 const buildCode = code => ({ 'invalid-payload': 'invalid-target', 'invalid-output': 'invalid-artifact' }[code] ?? code);
 const operations = new Map([
+  ['review-check', { contract: 'webvtt.review-check', input: 'tsumugi.review-check-input', handler: checkReview }],
   ['extract-source', { contract: 'webvtt.extract', input: 'tsumugi.source-extraction-input', handler: extractSource }],
   ['source-semantic-check', { contract: 'webvtt.source-check', input: 'tsumugi.source-extraction-check-input', handler: checkSourceSemantics }],
   ['build', { contract: 'webvtt.locale-build', input: 'tsumugi.build-input', handler: buildCaptions }],
@@ -48,11 +50,21 @@ const component = {
         if ((id === 'build' && !validateBuildInput(input)) || (id === 'validate-artifact' && !validateArtifactCheckInput(input))) {
           throw new WebvttError('invalid-input', 'Operation input does not match the SDK schema.');
         }
+        if (id === 'review-check' && !validateReviewCheckInput(input)) {
+          throw new WebvttError('invalid-input', 'Review input does not match the SDK schema.');
+        }
         const output = operation.handler(input, metadata.signal);
         if (metadata.signal.aborted || api.signal.aborted) throw new WebvttError('cancelled', 'Operation cancelled.');
         return { kind: 'succeeded', utf8: encoded(output) };
       } catch (error) {
         if (!(error instanceof WebvttError)) throw error;
+        if (id === 'review-check') {
+          const code = error.code === 'invalid-payload' ? 'invalid-translation' : error.code;
+          const supported = new Set(['invalid-input', 'unsupported-profile', 'invalid-source', 'invalid-translation', 'unsupported-structure', 'limit-exceeded', 'cancelled']);
+          const unit = input?.selections?.[0]?.unitId;
+          return { kind: 'failed', utf8: encoded({ code: supported.has(code) ? code : 'invalid-input',
+            unitId: typeof unit === 'string' && /^[A-Za-z0-9._:/-]{1,128}$/.test(unit) ? unit : null, detail: error.detail }) };
+        }
         if (id === 'extract-source' || id === 'source-semantic-check') {
           const artifactId = (id === 'extract-source' ? input : input?.source)?.artifacts?.[0]?.id;
           /** @type {SourceExtractionError} */

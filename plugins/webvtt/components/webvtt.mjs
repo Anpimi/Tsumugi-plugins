@@ -352,6 +352,67 @@ export function checkSourceSemantics(input, signal) {
   return results;
 }
 
+export const REVIEW_RULES = Object.freeze([
+  Object.freeze({ rule: Object.freeze(contract('webvtt.source-structure')), requiresTranslation: false }),
+  Object.freeze({ rule: Object.freeze(contract('webvtt.payload')), requiresTranslation: true }),
+]);
+
+/** Captured domain QA only; project decisions, resources, fallback and release
+ * qualification stay application-owned. No builder is invoked as an oracle. */
+export function checkReview(input, signal) {
+  cancelled(signal); encoded(input, MAX_SOURCE_CHECK_BYTES); encoded(input.source);
+  record(input, ['source', 'targetLanguage', 'selections', 'requirements']);
+  if (!language(input.targetLanguage) || !Array.isArray(input.selections) || !input.selections.length
+    || input.selections.length > MAX_CUES || !Array.isArray(input.requirements)
+    || input.requirements.length !== REVIEW_RULES.length) reject('invalid-input', 'Expected a fixed caption review scope and complete domain rules.');
+  const { artifact, parsed } = capturedSource(input.source, signal);
+  const faithful = faithfulSourceProposal({ proposal: input.source }, artifact, parsed, signal);
+  const units = new Map(input.source.units.map(unit => [unit.id, unit]));
+  const selected = new Set();
+  for (const selection of input.selections) {
+    cancelled(signal); record(selection, ['unitId', 'sourceRevisionId', 'translationText']);
+    const unit = units.get(selection.unitId);
+    if (!unit || selected.has(selection.unitId) || unit.sourceRevisionId !== selection.sourceRevisionId
+      || (selection.translationText !== null && (typeof selection.translationText !== 'string'
+        || !selection.translationText.isWellFormed() || Buffer.byteLength(selection.translationText) > MAX_TEXT_BYTES))) {
+      reject('invalid-input', 'Caption review selection does not match its captured unit, revision or text limit.');
+    }
+    selected.add(selection.unitId);
+  }
+  const anyMissing = input.selections.some(selection => selection.translationText === null);
+  const allMissing = input.selections.every(selection => selection.translationText === null);
+  const seen = new Set(); let selectedProvider;
+  for (const value of input.requirements) {
+    cancelled(signal); const declared = REVIEW_RULES.find(rule => exactContract(value.key?.rule, rule.rule.id));
+    const provider = value.key?.implementation?.provider;
+    if (!declared || seen.has(declared.rule.id) || value.key.implementation.kind !== 'plugin'
+      || provider?.plugin?.publisher !== 'org.tsumugi' || provider.plugin.id !== 'webvtt' || provider.plugin.version !== '0.1.0-alpha.1'
+      || provider.componentId !== 'caption-worker' || provider.contributionId !== 'review-check' || !digest(provider.packageDigest)
+      || (selectedProvider && selectedProvider !== provider.packageDigest)
+      || !digest(value.inputDigest) || !digest(value.scopeDigest) || value.mandatory !== true || value.waivable !== false
+      || !Array.isArray(value.targets) || value.targets.length !== selected.size
+      || new Set(value.targets).size !== selected.size || value.targets.some(target => !selected.has(target))) {
+      reject('invalid-input', 'Caption review requirement does not match its declared rule, provider or exact scope.');
+    }
+    if (value.notApplicable !== null && (!declared.requiresTranslation || !allMissing
+      || value.notApplicable?.code !== 'missing-translation' || !digest(value.notApplicable.basisDigest))) {
+      reject('invalid-input', 'Caption applicability does not match the captured missing-text scope.');
+    }
+    selectedProvider = provider.packageDigest; seen.add(declared.rule.id);
+  }
+  const output = input.requirements.map(value => {
+    cancelled(signal); const isPayload = value.key.rule.id === 'webvtt.payload';
+    let outcome;
+    if (isPayload && allMissing && value.notApplicable !== null) outcome = { kind: 'not-applicable', basis: structuredClone(value.notApplicable) };
+    else if (isPayload && anyMissing) outcome = { kind: 'unavailable' };
+    else outcome = { kind: 'completed', findings: input.selections.filter(selection => isPayload
+      ? !validPayload(selection.translationText) : !faithful).map(selection => ({ code: isPayload ? 'invalid-payload' : 'source-mismatch', target: selection.unitId, severity: 'error' })) };
+    return { key: structuredClone(value.key), inputDigest: value.inputDigest, scopeDigest: value.scopeDigest,
+      coveredTargets: [...value.targets], outcome };
+  });
+  cancelled(signal); encoded(output); return output;
+}
+
 export function safeOutputPath(value) {
   if (typeof value !== 'string' || !value.endsWith('.vtt')) return false;
   const stem = value.slice(0, -4);

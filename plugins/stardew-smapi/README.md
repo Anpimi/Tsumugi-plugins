@@ -86,3 +86,25 @@ Discovery outside the exact declared
 materials, source-update project adoption and final production cutover remain
 application integration work. This candidate does not complete SMAPI migration
 or claim a release, Windows runtime support, OS isolation or game compatibility.
+
+## Domain review checks
+
+The `review-profile` Resource declares the exact `review-check` capability and
+mandatory rule versions. Its SDK ReviewCheckInput retains complete original
+source evidence plus an explicit selected unit/revision/text scope. This checker
+runs separately from source extraction and checking actual built artifacts.
+It returns SDK CheckResults with exact captured keys, digests and target coverage.
+Missing selected text needs an explicitly captured N/A basis for a rule that
+depends on translation; source-only rules still run. Missing requirements, wrong
+versions/providers and out-of-scope selections refuse success.
+
+The package contributes `smapi.placeholders` (named marker names/counts) and
+`smapi.format` (marker syntax, source fidelity and unsupported control characters).
+Malformed marker inventories remain unavailable and format findings block.
+
+Core independently fixes its mandatory rules and owns manual approval, empty
+selected-translation policy, terminology, source-fallback decisions, waivers and
+release eligibility. Plugin checks cannot replace those rules or approve a
+release. Actual Core/Desktop Review integration remains in development. This
+remains the same unpublished plugin `0.1.0-alpha.1` batch, without a release or
+historical development-format migration.

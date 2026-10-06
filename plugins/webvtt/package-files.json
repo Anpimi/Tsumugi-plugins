@@ -14,7 +14,8 @@
     "package.json",
     "package-files.json",
     "profiles/source-import.json",
-    "profiles/build.json"
+    "profiles/build.json",
+    "profiles/review.json"
   ],
   "sdkFiles": [
     {
@@ -32,6 +33,10 @@
     {
       "source": "javascript/validate-artifact-check-input.mjs",
       "target": "sdk/validate-artifact-check-input.mjs"
+    },
+    {
+      "source": "javascript/validate-review-check-input.mjs",
+      "target": "sdk/validate-review-check-input.mjs"
     },
     {
       "source": "LICENSE",

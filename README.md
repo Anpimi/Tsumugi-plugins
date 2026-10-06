@@ -9,7 +9,8 @@ The repository provides a pinned SDK source artifact, an independent Rust consum
 check, and independent WebVTT and SMAPI JavaScript candidates for source extraction,
 separate source semantics, locale building and separate artifact checking. SMAPI
 translation extraction and independent whole-file checking use the same public
-SDK. Project language confirmation, matching/adoption and full domain cutover
+SDK. Both candidates also provide mandatory review-rule Resources and separate
+selected-text QA components. Project language confirmation, matching/adoption and full domain cutover
 remain application integration work.
 These packages are experimental candidates; no plugin release is claimed.
 

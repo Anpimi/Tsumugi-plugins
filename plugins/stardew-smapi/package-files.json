@@ -22,7 +22,8 @@
     ".generated/jsonc-parser/lib/umd/impl/format.js",
     ".generated/jsonc-parser/lib/umd/impl/parser.js",
     ".generated/jsonc-parser/lib/umd/impl/scanner.js",
-    ".generated/jsonc-parser/lib/umd/impl/string-intern.js"
+    ".generated/jsonc-parser/lib/umd/impl/string-intern.js",
+    "profiles/review.json"
   ],
   "sdkFiles": [
     {
@@ -52,6 +53,10 @@
     {
       "source": "javascript/validate-translation-exchange.mjs",
       "target": "sdk/validate-translation-exchange.mjs"
+    },
+    {
+      "source": "javascript/validate-review-check-input.mjs",
+      "target": "sdk/validate-review-check-input.mjs"
     },
     {
       "source": "LICENSE",

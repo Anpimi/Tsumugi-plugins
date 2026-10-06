@@ -41,3 +41,11 @@ Rust strict receivers and generated JavaScript declarations/structural validator
 SMAPI consumes these shapes without importing project state. The new snapshot
 stays within the same undistributed SDK alpha.1 batch; current-source matching,
 actual consent and adoption remain application responsibilities.
+
+The selected review snapshot includes ReviewCheckInput, ReviewDeclaration/Binding
+and finite ReviewCheckError data, with generated JavaScript review types and
+structural validators. Its exact producer commit and archive SHA-256 are retained
+in sdk.lock.json; prior development archives remain unchanged. Plugins contribute
+mandatory domain rules through these contracts, while Core still owns review
+policy, approval, terminology, explicit fallback, waivers and qualification.
+These additions stay in the same unpublished SDK alpha.1 batch.
