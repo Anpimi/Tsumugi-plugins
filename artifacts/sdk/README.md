@@ -56,3 +56,12 @@ source and Review providers from one package/profile. The precise producer
 commit and archive digest are selected in `sdk.lock.json`; earlier archives and
 their verified caches remain preserved. This is the same unpublished SDK
 alpha.1 batch, with no historical recipe conversion.
+
+The selected snapshot also provides the optional Rust `native-worker` entry
+point. It owns framing, invocation identity, cooperative cancellation and
+component disposal; a plugin implements the SDK's `NativeComponent` rather
+than another transport. Default SDK features remain data-only. Its separate
+Native application Host environment profile carries no artificial Node
+artifacts and grants no installation or execution permission. This remains
+the same unpublished SDK alpha.1 batch. Runtime approval, real package/channel
+binding and project adoption belong to the public Host and application.
