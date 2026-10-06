@@ -8,6 +8,8 @@ Development target: **0.1.0-alpha.1**. No plugin release has been published.
 
 ### Added
 
+- Source recipes now use schema/behavior 2/2 and require their exact immutable `review-profile` Resource. Consumers must use the newly pinned SDK; earlier experimental recipes are refused without conversion. Source and Review data contracts and the unreleased package version remain unchanged.
+
 - A mandatory review Resource and selected-text QA capability now check fixed source evidence and exact rule versions through SDK CheckResults. Missing text uses only explicitly permitted N/A evidence; source checks continue. Core approval, terminology, fallback, waivers and release eligibility remain separate application responsibilities.
 
 - An independent JavaScript SMAPI flat profile captures source content with native key and original byte-range evidence, and checks the complete proposal separately. The fixed parser retains JSONC and BOM handling with explicit bounded refusals.

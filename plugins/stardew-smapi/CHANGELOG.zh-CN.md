@@ -8,6 +8,8 @@
 
 ### Added
 
+- 源配方改用 schema/behavior 2/2，并必须引用准确且不可变的 `review-profile` Resource。消费者须使用新固定的 SDK；旧实验配方拒绝，不做转换。源与 Review 数据契约及未发布插件版本保持不变。
+
 - 新增必需审阅 Resource 与所选文本 QA 能力，通过 SDK CheckResults 检查固定源证据和准确规则版本。缺译文只允许明确捕获的不适用依据，源检查继续执行；Core 人工批准、术语、回退、豁免和发布资格仍由应用负责。
 
 - 独立 JavaScript SMAPI 平铺 profile 提取带原生 key 和原字节范围依据的源内容，并单独检查完整提案。固定 parser 保留 JSONC 与 BOM 处理，并明确拒绝超限或不支持的输入。

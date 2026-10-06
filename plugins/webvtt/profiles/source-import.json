@@ -1,12 +1,39 @@
 {
   "displayName": "WebVTT captions",
-  "profile": { "id": "webvtt-captions", "schemaVersion": 1, "behaviorVersion": 1 },
-  "materials": [{ "logicalPath": "source.vtt", "role": "source", "maxBytes": 131072 }],
+  "profile": {
+    "id": "webvtt-captions",
+    "schemaVersion": 1,
+    "behaviorVersion": 1
+  },
+  "materials": [
+    {
+      "logicalPath": "source.vtt",
+      "role": "source",
+      "maxBytes": 131072
+    }
+  ],
   "extractor": "extract-source",
   "checker": "source-semantic-check",
   "revisionPolicy": {
-    "profile": { "id": "webvtt-captions", "schemaVersion": 1, "behaviorVersion": 1 },
-    "revisionBasis": [{ "id": "webvtt.cue-basis", "schemaVersion": 1, "behaviorVersion": 1 }]
+    "profile": {
+      "id": "webvtt-captions",
+      "schemaVersion": 1,
+      "behaviorVersion": 1
+    },
+    "revisionBasis": [
+      {
+        "id": "webvtt.cue-basis",
+        "schemaVersion": 1,
+        "behaviorVersion": 1
+      }
+    ]
   },
-  "semanticRules": [{ "id": "webvtt.source-semantics", "schemaVersion": 1, "behaviorVersion": 1 }]
+  "semanticRules": [
+    {
+      "id": "webvtt.source-semantics",
+      "schemaVersion": 1,
+      "behaviorVersion": 1
+    }
+  ],
+  "reviewResource": "review-profile"
 }

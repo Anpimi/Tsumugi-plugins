@@ -49,3 +49,10 @@ in sdk.lock.json; prior development archives remain unchanged. Plugins contribut
 mandatory domain rules through these contracts, while Core still owns review
 policy, approval, terminology, explicit fallback, waivers and qualification.
 These additions stay in the same unpublished SDK alpha.1 batch.
+
+Source-import Resources now use schema/behavior 2/2 and require a named immutable
+Review Resource. Binding accepts the captured Review declaration and fixes all
+source and Review providers from one package/profile. The precise producer
+commit and archive digest are selected in `sdk.lock.json`; earlier archives and
+their verified caches remain preserved. This is the same unpublished SDK
+alpha.1 batch, with no historical recipe conversion.

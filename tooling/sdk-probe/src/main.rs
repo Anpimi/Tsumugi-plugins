@@ -30,6 +30,42 @@ mod tests {
     use tsumugi_plugin_sdk::{ContractErrorCode, bind_capability};
 
     #[test]
+    fn standalone_source_consumer_adopts_each_packages_declared_review_resource() {
+        use tsumugi_plugin_sdk::*;
+        for (manifest, source, review) in [
+            (
+                include_bytes!("../../../plugins/stardew-smapi/manifest.json").as_slice(),
+                include_bytes!("../../../plugins/stardew-smapi/profiles/source-import.json")
+                    .as_slice(),
+                include_bytes!("../../../plugins/stardew-smapi/profiles/review.json").as_slice(),
+            ),
+            (
+                include_bytes!("../../../plugins/webvtt/manifest.json").as_slice(),
+                include_bytes!("../../../plugins/webvtt/profiles/source-import.json").as_slice(),
+                include_bytes!("../../../plugins/webvtt/profiles/review.json").as_slice(),
+            ),
+        ] {
+            let manifest = parse_manifest(manifest).unwrap();
+            let declaration = parse_source_import_declaration(source).unwrap();
+            let review = parse_review_declaration(review).unwrap();
+            let binding = declaration
+                .bind(&manifest, &"a".repeat(64), &review)
+                .unwrap();
+            assert_eq!(binding.declaration.review_resource, "review-profile");
+            assert_eq!(binding.review.declaration, review);
+            assert_eq!(
+                binding.review.checker.provider.package_digest,
+                binding.extractor.provider.package_digest
+            );
+            assert_eq!(
+                binding.review.declaration.profile,
+                binding.declaration.profile
+            );
+            binding.validate().unwrap();
+        }
+    }
+
+    #[test]
     fn standalone_review_consumer_binds_both_actual_package_resources() {
         use tsumugi_plugin_sdk::*;
         for (manifest, resource, expected) in [

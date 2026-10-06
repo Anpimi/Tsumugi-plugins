@@ -12,7 +12,9 @@ translation extraction and independent whole-file checking use the same public
 SDK. Both candidates also provide mandatory review-rule Resources and separate
 selected-text QA components. Project language confirmation, matching/adoption and full domain cutover
 remain application integration work.
-These packages are experimental candidates; no plugin release is claimed.
+Their source-import Resources use schema/behavior 2/2 and select exact immutable
+Review Resources; source/profile rules and checker bindings come from the same
+SDK-pinned package. These packages are experimental candidates; no plugin release is claimed.
 
 ## Build the independent SDK consumer
 

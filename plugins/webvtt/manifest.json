@@ -223,8 +223,8 @@
         "kind": "resource",
         "schema": {
           "id": "tsumugi.source-import-declaration",
-          "schemaVersion": 1,
-          "behaviorVersion": 1
+          "schemaVersion": 2,
+          "behaviorVersion": 2
         },
         "path": "profiles/source-import.json"
       }

@@ -89,6 +89,10 @@ or claim a release, Windows runtime support, OS isolation or game compatibility.
 
 ## Domain review checks
 
+The source-import Resource uses schema/behavior 2/2 and names this package's
+exact `review-profile` as `reviewResource`. Applications capture that selection
+with the source; reading metadata grants no checker execution or approval.
+
 The `review-profile` Resource declares the exact `review-check` capability and
 mandatory rule versions. Its SDK ReviewCheckInput retains complete original
 source evidence plus an explicit selected unit/revision/text scope. This checker
