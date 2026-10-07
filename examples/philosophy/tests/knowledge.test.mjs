@@ -4,6 +4,7 @@ import test from 'node:test';
 import component from '../components/component.mjs';
 import { createKnowledgeEngine, digest, KnowledgeError, OPERATIONS, PROFILE } from '../components/knowledge.mjs';
 import validateTool from '../../../.cache/sdk/tsumugi-plugin-sdk-0.1.0-alpha.1/javascript/validate-tool-declaration.mjs';
+import { createToolQuery } from '../../../.cache/sdk/tsumugi-plugin-sdk-0.1.0-alpha.1/javascript/tool-query.mjs';
 
 const bytes = readFileSync(new URL('../resources/terminology.json', import.meta.url), 'utf8');
 const engine = createKnowledgeEngine(bytes);
@@ -83,7 +84,7 @@ test('AI tool metadata selects the original capability and does not replace its 
   const metadata = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8'));
   assert.equal(manifest.plugin.version, metadata.version);
   assert.equal(validateTool(tool), true);
-  assert.deepEqual(Object.keys(tool).sort(), ['name', 'title', 'description', 'capabilityId', 'profile', 'supportingResources', 'skill'].sort());
+  assert.deepEqual(Object.keys(tool).sort(), ['name', 'title', 'description', 'capabilityId', 'profile', 'supportingResources', 'skill', 'query'].sort());
   const selected = manifest.contributions.find(c => c.id === tool.capabilityId).contribution.declaration;
   assert.deepEqual(tool.profile, PROFILE); assert.ok(selected.profiles.some(p => JSON.stringify(p) === JSON.stringify(tool.profile)));
   assert.equal(selected.effect, 'read-only');
@@ -95,4 +96,43 @@ test('AI tool metadata selects the original capability and does not replace its 
   assert.deepEqual(selected.permissions, [{ kind: 'captured-input' }]);
   assert.deepEqual(manifest.components.map(c => c.dependencies), [[], []]);
   assert.equal(manifest.contributions.filter(c => c.contribution.kind === 'skill').length, 1);
+});
+
+test('public text-query presentation uses the original SDK component for single, batch and empty reference results', () => {
+  const tool = JSON.parse(readFileSync(new URL('../resources/agent-query-tool.json', import.meta.url), 'utf8'));
+  const manifest = JSON.parse(readFileSync(new URL('../manifest.json', import.meta.url), 'utf8'));
+  const selected = manifest.contributions.find(c => c.id === tool.capabilityId).contribution.declaration;
+  const presentation = createToolQuery({ declaration: tool, capability: { declaration: selected } });
+  const template = structuredClone(tool.query.inputTemplate);
+  assert.deepEqual(template.resource, engine.pin);
+  assert.deepEqual(presentation.query.selections.options.map(option => option.value), JSON.parse(bytes).concepts.map(concept => concept.id));
+  let handler;
+  const signal = new AbortController().signal;
+  component.activate({ contribution: { id: 'query', contract: OPERATIONS.query.contract }, signal,
+    register(value) { handler = value; }, onDispose() {} });
+  const execute = input => {
+    const utf8 = JSON.stringify(input);
+    const result = handler({ schema: OPERATIONS.query.input, utf8, sha256: digest(utf8) }, { profile: PROFILE, signal, context: {} });
+    assert.deepEqual(Object.keys(result).sort(), ['kind', 'utf8']);
+    assert.equal(typeof result.utf8, 'string');
+    return { result, value: JSON.parse(result.utf8) };
+  };
+  const single = presentation.prepare({ text: 'A sound inference 👩🏽‍💻 e\u0301', target: 'zh-CN', selections: ['soundness'] });
+  const completed = execute(single);
+  assert.equal(completed.result.kind, 'succeeded');
+  assert.deepEqual(completed.value, engine.query(single));
+  assert.equal(presentation.entries(completed.value)[0][1], '可靠性');
+  const batch = ['sound premises', 'No selected term here'].map(text => presentation.prepare({ text, target: 'ja', selections: ['soundness'] }));
+  const results = batch.map(execute);
+  assert.deepEqual(results.map(({ result }) => result.kind), ['succeeded', 'succeeded']);
+  assert.equal(presentation.entries(results[0].value)[0][1], '健全性');
+  assert.deepEqual(presentation.entries(results[1].value), []);
+  assert.equal(results[1].value.basis.resource.sha256, engine.pin.sha256);
+  assert.equal(results[1].value.basis.querySha256, digest(JSON.stringify(batch[1])));
+  const replaced = structuredClone(single); replaced.resource.revision = 'replaced';
+  const refused = execute(replaced);
+  assert.deepEqual(refused.value, { code: 'resource-mismatch' });
+  assert.equal(refused.result.kind, 'failed');
+  assert.deepEqual(tool.query.inputTemplate, template);
+  assert.equal(completed.value.basis.authority, 'unadopted-editorial-suggestion');
 });

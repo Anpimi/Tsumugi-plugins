@@ -4,6 +4,8 @@ The English changelog is authoritative; `CHANGELOG.zh-CN.md` mirrors it.
 
 ## [Unreleased]
 
+- Generate the bounded public text-query presentation from the original terminology resource, with exact input pins, explicit target/sense options and reference columns. Single and batch consumers use the SDK helper and the original component; rendered product and Agent integration remain pending.
+
 - Replace the package-specific Agent descriptor with the public SDK's strict
   read-only tool selector, exact profile and same-package terminology/Skill
   references. Preparation validates its structure from the pinned SDK artifact;

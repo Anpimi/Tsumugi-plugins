@@ -11,5 +11,122 @@
     "terminology"
   ],
   "skill": "concept-review",
-  "description": "Query explicitly selected philosophical concepts using the exact captured terminology resource. Returned preferences are unadopted suggestions."
+  "description": "Query explicitly selected philosophical concepts using the exact captured terminology resource. Returned preferences are unadopted suggestions.",
+  "query": {
+    "inputSchema": {
+      "id": "org.tsumugi.examples.philosophy-query-input",
+      "schemaVersion": 1,
+      "behaviorVersion": 1
+    },
+    "outputSchema": {
+      "id": "org.tsumugi.examples.philosophy-query-output",
+      "schemaVersion": 1,
+      "behaviorVersion": 1
+    },
+    "inputTemplate": {
+      "resource": {
+        "id": "org.tsumugi.examples.philosophy-terminology",
+        "revision": "editorial-1",
+        "sha256": "4e7da55e8280a6f6ecfbbd79b7a7d2d8b8d254ad1b8f4d56fa853abf94f40309"
+      },
+      "sourceLanguage": "en",
+      "targetLanguage": "zh-CN",
+      "queries": [
+        {
+          "id": "query",
+          "text": "",
+          "conceptIds": []
+        }
+      ]
+    },
+    "textPath": [
+      "queries",
+      0,
+      "text"
+    ],
+    "maxTextBytes": 8192,
+    "target": {
+      "label": "Target language",
+      "description": "Choose the language of the reference preferences.",
+      "path": [
+        "targetLanguage"
+      ],
+      "options": [
+        {
+          "value": "zh-CN",
+          "label": "简体中文",
+          "description": "Simplified Chinese editorial preferences."
+        },
+        {
+          "value": "ja",
+          "label": "日本語",
+          "description": "Japanese editorial preferences."
+        }
+      ],
+      "minSelected": 1,
+      "maxSelected": 1
+    },
+    "selections": {
+      "label": "Intended concepts",
+      "description": "Choose the intended logic senses. A matching spelling alone does not select a sense.",
+      "path": [
+        "queries",
+        0,
+        "conceptIds"
+      ],
+      "options": [
+        {
+          "value": "validity",
+          "label": "validity",
+          "description": "Use this entry when discussing an argument's validity; do not infer the intended sense from the spelling alone."
+        },
+        {
+          "value": "soundness",
+          "label": "soundness",
+          "description": "Use this entry for the selected logic sense of soundness, not sound as audio or a condition of health."
+        },
+        {
+          "value": "premise",
+          "label": "premise",
+          "description": "This project's preferred term applies to the selected argument context."
+        },
+        {
+          "value": "inference",
+          "label": "inference",
+          "description": "Use the preferred term only within the explicitly selected reasoning context."
+        }
+      ],
+      "minSelected": 1,
+      "maxSelected": 4
+    },
+    "output": {
+      "entriesPath": [
+        "results",
+        0,
+        "entries"
+      ],
+      "columns": [
+        {
+          "label": "Concept",
+          "path": [
+            "conceptId"
+          ]
+        },
+        {
+          "label": "Preferred translation",
+          "path": [
+            "preferredTarget"
+          ]
+        },
+        {
+          "label": "Usage note",
+          "path": [
+            "note"
+          ]
+        }
+      ],
+      "maxEntries": 4,
+      "emptyDescription": "No preference matches this text and the explicitly selected concepts."
+    }
+  }
 }

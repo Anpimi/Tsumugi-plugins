@@ -24,6 +24,13 @@ schemas, limits and permissions come from the original capability. The declared
 Skill explains its use without granting tools. The prepare command uses the
 verified SDK's generated structural validator; actual Host binding separately
 checks package references and bounded semantic constraints.
+The tool's optional public `query` presentation is generated from the same
+terminology file: its exact pin, original schema references, explicit concept
+options, target languages and reference columns. The SDK's shared
+`createToolQuery` helper constructs original single or batch inputs, retains
+Unicode and scope, and displays typed reference entries or empty results.
+It does not execute a component, adopt a term or infer a sense from spelling.
+The original worker still verifies the exact resource and domain input.
 Application editor, batch and Agent tool discovery/invocation are separate
 integration work. This package does not claim that those product journeys or an
 AI execution loop have been accepted merely because metadata is present.

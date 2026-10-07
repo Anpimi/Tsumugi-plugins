@@ -1,9 +1,11 @@
 import { readFileSync, writeFileSync } from 'node:fs';
-import { OPERATIONS, ERROR_SCHEMA, PROFILE, RESOURCE_SCHEMA, contract, MAX_INPUT_BYTES, MAX_OUTPUT_BYTES } from '../components/knowledge.mjs';
+import { OPERATIONS, ERROR_SCHEMA, PROFILE, RESOURCE_SCHEMA, contract, digest, MAX_INPUT_BYTES, MAX_OUTPUT_BYTES } from '../components/knowledge.mjs';
 import validateTool from '../../../.cache/sdk/tsumugi-plugin-sdk-0.1.0-alpha.1/javascript/validate-tool-declaration.mjs';
 
 // One public definition owns capability metadata; preparation executes no worker.
 const version = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8')).version;
+const resourceUtf8 = readFileSync(new URL('../resources/terminology.json', import.meta.url), 'utf8');
+const resource = JSON.parse(resourceUtf8);
 const manifest = {
   protocolVersion: 1,
   plugin: { publisher: 'org.tsumugi.examples', id: 'philosophy', version },
@@ -24,7 +26,22 @@ const manifest = {
 };
 const tool = { name: 'philosophy_query', title: 'Philosophy terminology lookup', capabilityId: 'query',
   profile: PROFILE, supportingResources: ['terminology'], skill: 'concept-review',
-  description: 'Query explicitly selected philosophical concepts using the exact captured terminology resource. Returned preferences are unadopted suggestions.' };
+  description: 'Query explicitly selected philosophical concepts using the exact captured terminology resource. Returned preferences are unadopted suggestions.',
+  query: {
+    inputSchema: OPERATIONS.query.input, outputSchema: OPERATIONS.query.output,
+    inputTemplate: { resource: { id: resource.id, revision: resource.revision, sha256: digest(resourceUtf8) },
+      sourceLanguage: resource.sourceLanguage, targetLanguage: 'zh-CN', queries: [{ id: 'query', text: '', conceptIds: [] }] },
+    textPath: ['queries', 0, 'text'], maxTextBytes: 8192,
+    target: { label: 'Target language', description: 'Choose the language of the reference preferences.', path: ['targetLanguage'],
+      options: [{ value: 'zh-CN', label: '简体中文', description: 'Simplified Chinese editorial preferences.' },
+        { value: 'ja', label: '日本語', description: 'Japanese editorial preferences.' }], minSelected: 1, maxSelected: 1 },
+    selections: { label: 'Intended concepts', description: 'Choose the intended logic senses. A matching spelling alone does not select a sense.',
+      path: ['queries', 0, 'conceptIds'], options: resource.concepts.map(concept => ({ value: concept.id, label: concept.sourceForms[0], description: concept.note })),
+      minSelected: 1, maxSelected: resource.concepts.length },
+    output: { entriesPath: ['results', 0, 'entries'], columns: [
+      { label: 'Concept', path: ['conceptId'] }, { label: 'Preferred translation', path: ['preferredTarget'] }, { label: 'Usage note', path: ['note'] }],
+      maxEntries: resource.concepts.length, emptyDescription: 'No preference matches this text and the explicitly selected concepts.' },
+  } };
 if (!validateTool(tool)) throw new Error('Tool declaration does not match the selected public SDK.');
 for (const [path, value] of [['manifest.json', manifest], ['resources/agent-query-tool.json', tool]]) {
   writeFileSync(new URL(`../${path}`, import.meta.url), JSON.stringify(value, null, 2) + '\n');
