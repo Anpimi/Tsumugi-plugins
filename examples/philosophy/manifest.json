@@ -1,0 +1,169 @@
+{
+  "protocolVersion": 1,
+  "plugin": {
+    "publisher": "org.tsumugi.examples",
+    "id": "philosophy",
+    "version": "0.1.0-alpha.1"
+  },
+  "permissions": [
+    {
+      "kind": "captured-input"
+    }
+  ],
+  "components": [
+    {
+      "id": "knowledge",
+      "scope": "project",
+      "runtime": "javascript",
+      "entrypoint": "components/component.mjs",
+      "dependencies": [],
+      "exit": {
+        "stopTimeoutMs": 1000,
+        "cleanupTimeoutMs": 1000
+      }
+    },
+    {
+      "id": "reference",
+      "scope": "application",
+      "runtime": "data",
+      "entrypoint": null,
+      "dependencies": [],
+      "exit": {
+        "stopTimeoutMs": 1000,
+        "cleanupTimeoutMs": 1000
+      }
+    }
+  ],
+  "contributions": [
+    {
+      "id": "query",
+      "componentId": "knowledge",
+      "contribution": {
+        "kind": "capability",
+        "declaration": {
+          "contract": {
+            "id": "org.tsumugi.examples.philosophy-query",
+            "schemaVersion": 1,
+            "behaviorVersion": 1
+          },
+          "inputSchema": {
+            "id": "org.tsumugi.examples.philosophy-query-input",
+            "schemaVersion": 1,
+            "behaviorVersion": 1
+          },
+          "outputSchema": {
+            "id": "org.tsumugi.examples.philosophy-query-output",
+            "schemaVersion": 1,
+            "behaviorVersion": 1
+          },
+          "errorSchema": {
+            "id": "org.tsumugi.examples.philosophy-error",
+            "schemaVersion": 1,
+            "behaviorVersion": 1
+          },
+          "profiles": [
+            {
+              "id": "org.tsumugi.examples.philosophy-terminology",
+              "schemaVersion": 1,
+              "behaviorVersion": 1
+            }
+          ],
+          "effect": "read-only",
+          "permissions": [
+            {
+              "kind": "captured-input"
+            }
+          ],
+          "limits": {
+            "maxInputBytes": 65536,
+            "maxOutputBytes": 65536,
+            "concurrency": 1,
+            "timeoutMs": 5000
+          }
+        }
+      }
+    },
+    {
+      "id": "check",
+      "componentId": "knowledge",
+      "contribution": {
+        "kind": "capability",
+        "declaration": {
+          "contract": {
+            "id": "org.tsumugi.examples.philosophy-check",
+            "schemaVersion": 1,
+            "behaviorVersion": 1
+          },
+          "inputSchema": {
+            "id": "org.tsumugi.examples.philosophy-check-input",
+            "schemaVersion": 1,
+            "behaviorVersion": 1
+          },
+          "outputSchema": {
+            "id": "org.tsumugi.examples.philosophy-check-output",
+            "schemaVersion": 1,
+            "behaviorVersion": 1
+          },
+          "errorSchema": {
+            "id": "org.tsumugi.examples.philosophy-error",
+            "schemaVersion": 1,
+            "behaviorVersion": 1
+          },
+          "profiles": [
+            {
+              "id": "org.tsumugi.examples.philosophy-terminology",
+              "schemaVersion": 1,
+              "behaviorVersion": 1
+            }
+          ],
+          "effect": "read-only",
+          "permissions": [
+            {
+              "kind": "captured-input"
+            }
+          ],
+          "limits": {
+            "maxInputBytes": 65536,
+            "maxOutputBytes": 65536,
+            "concurrency": 1,
+            "timeoutMs": 5000
+          }
+        }
+      }
+    },
+    {
+      "id": "terminology",
+      "componentId": "reference",
+      "contribution": {
+        "kind": "resource",
+        "schema": {
+          "id": "org.tsumugi.examples.terminology-resource",
+          "schemaVersion": 1,
+          "behaviorVersion": 1
+        },
+        "path": "resources/terminology.json"
+      }
+    },
+    {
+      "id": "agent-query-tool",
+      "componentId": "reference",
+      "contribution": {
+        "kind": "resource",
+        "schema": {
+          "id": "org.tsumugi.examples.capability-tool",
+          "schemaVersion": 1,
+          "behaviorVersion": 1
+        },
+        "path": "resources/agent-query-tool.json"
+      }
+    },
+    {
+      "id": "concept-review",
+      "componentId": "reference",
+      "contribution": {
+        "kind": "skill",
+        "path": "skills/concept-review.md"
+      }
+    }
+  ]
+}

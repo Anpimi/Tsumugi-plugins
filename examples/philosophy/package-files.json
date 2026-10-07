@@ -1,0 +1,11 @@
+{
+  "formatVersion": 1,
+  "files": [
+    "manifest.json", "package.json", "package-files.json",
+    "components/component.mjs", "components/knowledge.mjs",
+    "resources/terminology.json", "resources/agent-query-tool.json",
+    "skills/concept-review.md", "README.md", "LICENSE",
+    "CHANGELOG.md", "CHANGELOG.zh-CN.md"
+  ],
+  "sdkFiles": [{ "source": "LICENSE", "target": "sdk/LICENSE" }]
+}

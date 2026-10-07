@@ -66,6 +66,12 @@ See the [package contracts](plugins/webvtt/docs/contracts.md) and
 
 ## Package ownership
 
+The [philosophy terminology example](examples/philosophy/README.md) is a knowledge
+package independent of file formats. Its immutable editorial resource powers
+public query and deterministic check capabilities; a Skill and Agent tool
+descriptor select that same query implementation. Product tool integration is
+separate from this development candidate's resource and Worker contracts.
+
 The [Rust JSON message catalog example](examples/flat-json/README.md) consumes
 the same pinned public SDK without Core or desktop dependencies. It implements
 source extraction, independent source/QA/artifact checks and locale building;

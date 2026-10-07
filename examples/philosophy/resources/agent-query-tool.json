@@ -1,0 +1,26 @@
+{
+  "name": "philosophy_query",
+  "contributionId": "query",
+  "capability": {
+    "id": "org.tsumugi.examples.philosophy-query",
+    "schemaVersion": 1,
+    "behaviorVersion": 1
+  },
+  "inputSchema": {
+    "id": "org.tsumugi.examples.philosophy-query-input",
+    "schemaVersion": 1,
+    "behaviorVersion": 1
+  },
+  "outputSchema": {
+    "id": "org.tsumugi.examples.philosophy-query-output",
+    "schemaVersion": 1,
+    "behaviorVersion": 1
+  },
+  "profile": {
+    "id": "org.tsumugi.examples.philosophy-terminology",
+    "schemaVersion": 1,
+    "behaviorVersion": 1
+  },
+  "effect": "read-only",
+  "description": "Query explicitly selected philosophical concepts using the exact captured terminology resource. Returned preferences are unadopted suggestions."
+}
