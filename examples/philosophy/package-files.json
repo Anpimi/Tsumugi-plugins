@@ -2,10 +2,15 @@
   "formatVersion": 1,
   "files": [
     "manifest.json", "package.json", "package-files.json",
-    "components/component.mjs", "components/knowledge.mjs",
-    "resources/terminology.json", "resources/agent-query-tool.json",
+    "components/component.mjs", "components/knowledge.mjs", "components/definition.mjs", "components/text-review.mjs",
+    "resources/terminology.json", "resources/agent-query-tool.json", "resources/text-review.json",
     "skills/concept-review.md", "README.md", "LICENSE",
     "CHANGELOG.md", "CHANGELOG.zh-CN.md"
   ],
-  "sdkFiles": [{ "source": "LICENSE", "target": "sdk/LICENSE" }]
+  "sdkFiles": [
+    { "source": "javascript/validate-text-review-input.mjs", "target": "sdk/validate-text-review-input.mjs" },
+    { "source": "javascript/validate-text-review-declaration.mjs", "target": "sdk/validate-text-review-declaration.mjs" },
+    { "source": "javascript/validate-text-review-report.mjs", "target": "sdk/validate-text-review-report.mjs" },
+    { "source": "LICENSE", "target": "sdk/LICENSE" }
+  ]
 }

@@ -91,21 +91,21 @@
         "declaration": {
           "contract": {
             "id": "org.tsumugi.examples.philosophy-check",
-            "schemaVersion": 1,
-            "behaviorVersion": 1
+            "schemaVersion": 2,
+            "behaviorVersion": 2
           },
           "inputSchema": {
-            "id": "org.tsumugi.examples.philosophy-check-input",
+            "id": "tsumugi.text-review-input",
             "schemaVersion": 1,
             "behaviorVersion": 1
           },
           "outputSchema": {
-            "id": "org.tsumugi.examples.philosophy-check-output",
+            "id": "tsumugi.text-review-report",
             "schemaVersion": 1,
             "behaviorVersion": 1
           },
           "errorSchema": {
-            "id": "org.tsumugi.examples.philosophy-error",
+            "id": "tsumugi.review-check-error",
             "schemaVersion": 1,
             "behaviorVersion": 1
           },
@@ -142,6 +142,19 @@
           "behaviorVersion": 1
         },
         "path": "resources/terminology.json"
+      }
+    },
+    {
+      "id": "text-review",
+      "componentId": "reference",
+      "contribution": {
+        "kind": "resource",
+        "schema": {
+          "id": "tsumugi.text-review-declaration",
+          "schemaVersion": 1,
+          "behaviorVersion": 1
+        },
+        "path": "resources/text-review.json"
       }
     },
     {

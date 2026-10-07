@@ -1,15 +1,8 @@
 import { createHash } from 'node:crypto';
+export { contract, PROFILE, RESOURCE_SCHEMA, OPERATIONS, ERROR_SCHEMA } from './definition.mjs';
 
 export const MAX_INPUT_BYTES = 65536;
 export const MAX_OUTPUT_BYTES = 65536;
-export const contract = id => ({ id, schemaVersion: 1, behaviorVersion: 1 });
-export const PROFILE = contract('org.tsumugi.examples.philosophy-terminology');
-export const RESOURCE_SCHEMA = contract('org.tsumugi.examples.terminology-resource');
-export const OPERATIONS = Object.freeze({
-  query: { contract: contract('org.tsumugi.examples.philosophy-query'), input: contract('org.tsumugi.examples.philosophy-query-input'), output: contract('org.tsumugi.examples.philosophy-query-output') },
-  check: { contract: contract('org.tsumugi.examples.philosophy-check'), input: contract('org.tsumugi.examples.philosophy-check-input'), output: contract('org.tsumugi.examples.philosophy-check-output') },
-});
-export const ERROR_SCHEMA = contract('org.tsumugi.examples.philosophy-error');
 export const digest = text => createHash('sha256').update(text, 'utf8').digest('hex');
 export class KnowledgeError extends Error {
   constructor(code) { super(code); this.code = code; }
@@ -89,6 +82,7 @@ export function createKnowledgeEngine(resourceUtf8) {
   };
   return Object.freeze({
     pin,
+    resource,
     query(input, signal) {
       stop(signal); validate(input, 'queries', ['id', 'text', 'conceptIds']);
       const results = input.queries.map(row => {

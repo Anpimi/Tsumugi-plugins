@@ -65,12 +65,12 @@ test('resource capture is independent of a later caller mutation', () => {
   selected.concepts[0].targets['zh-CN'] = 'changed'; const input = query(); input.resource = { ...captured.pin };
   assert.equal(captured.query(input).results[0].entries[2].preferredTarget, '有效性'); assert.ok(Object.isFrozen(captured.pin));
 });
-test('SDK component exposes the same query and check engine with exact bindings', () => {
-  for (const operation of ['query', 'check']) {
+test('SDK query component preserves its original input and output bindings', () => {
+  for (const operation of ['query']) {
     let handler; const scope = new AbortController(); const signal = new AbortController();
     component.activate({ contribution: { id: operation, contract: OPERATIONS[operation].contract }, signal: scope.signal,
       register(h) { assert.equal(handler, undefined); handler = h; }, onDispose() {} });
-    const input = operation === 'query' ? query() : check();
+    const input = query();
     const payload = { schema: OPERATIONS[operation].input, utf8: JSON.stringify(input), sha256: digest(JSON.stringify(input)) };
     const metadata = { profile: PROFILE, signal: signal.signal, context: {} };
     assert.deepEqual(JSON.parse(handler(payload, metadata).utf8), engine[operation](input));
