@@ -18,7 +18,12 @@ ranges; they return suggestions, not project QA proofs or approval.
 
 Resources and deterministic functions need no model or Agent runtime. The
 `agent-query-tool` resource describes an adapter to the original `query`
-contribution, and the declared Skill explains its use without granting tools.
+contribution through the SDK's `tsumugi.capability-tool-declaration` 1/1 contract,
+with its exact profile, terminology Resource and Skill. Its input/output/error
+schemas, limits and permissions come from the original capability. The declared
+Skill explains its use without granting tools. The prepare command uses the
+verified SDK's generated structural validator; actual Host binding separately
+checks package references and bounded semantic constraints.
 Application editor, batch and Agent tool discovery/invocation are separate
 integration work. This package does not claim that those product journeys or an
 AI execution loop have been accepted merely because metadata is present.
@@ -52,3 +57,5 @@ replace a project term or human translation directly with a returned preference.
 This independently versioned, unreleased development example adds no application
 version, format migration or dependency. Its initial alpha version remains
 unchanged until a release boundary requires a new version decision.
+The earlier development-only package-specific tool descriptor is replaced by
+the explicit public SDK selector; no fallback or historical migration is supplied.

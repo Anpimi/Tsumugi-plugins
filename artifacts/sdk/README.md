@@ -65,3 +65,10 @@ Native application Host environment profile carries no artificial Node
 artifacts and grants no installation or execution permission. This remains
 the same unpublished SDK alpha.1 batch. Runtime approval, real package/channel
 binding and project adoption belong to the public Host and application.
+
+The selected tool snapshot adds the SDK's strict read-only capability selector,
+exact profile and same-package Resource/Skill references, with generated schemas,
+JavaScript types and a standalone structural validator. Philosophy preparation
+uses that validator from the verified artifact. Actual captured-package binding,
+current component availability and per-attempt authority remain Host/application
+responsibilities; tool guidance cannot grant them.

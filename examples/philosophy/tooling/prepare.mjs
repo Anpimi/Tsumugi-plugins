@@ -1,5 +1,6 @@
 import { readFileSync, writeFileSync } from 'node:fs';
 import { OPERATIONS, ERROR_SCHEMA, PROFILE, RESOURCE_SCHEMA, contract, MAX_INPUT_BYTES, MAX_OUTPUT_BYTES } from '../components/knowledge.mjs';
+import validateTool from '../../../.cache/sdk/tsumugi-plugin-sdk-0.1.0-alpha.1/javascript/validate-tool-declaration.mjs';
 
 // One public definition owns capability metadata; preparation executes no worker.
 const version = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8')).version;
@@ -17,13 +18,14 @@ const manifest = {
       effect: 'read-only', permissions: [{ kind: 'captured-input' }], limits: { maxInputBytes: MAX_INPUT_BYTES, maxOutputBytes: MAX_OUTPUT_BYTES, concurrency: 1, timeoutMs: 5000 },
     } } })),
     { id: 'terminology', componentId: 'reference', contribution: { kind: 'resource', schema: RESOURCE_SCHEMA, path: 'resources/terminology.json' } },
-    { id: 'agent-query-tool', componentId: 'reference', contribution: { kind: 'resource', schema: contract('org.tsumugi.examples.capability-tool'), path: 'resources/agent-query-tool.json' } },
+    { id: 'agent-query-tool', componentId: 'reference', contribution: { kind: 'resource', schema: contract('tsumugi.capability-tool-declaration'), path: 'resources/agent-query-tool.json' } },
     { id: 'concept-review', componentId: 'reference', contribution: { kind: 'skill', path: 'skills/concept-review.md' } },
   ],
 };
-const tool = { name: 'philosophy_query', contributionId: 'query', capability: OPERATIONS.query.contract,
-  inputSchema: OPERATIONS.query.input, outputSchema: OPERATIONS.query.output, profile: PROFILE,
-  effect: 'read-only', description: 'Query explicitly selected philosophical concepts using the exact captured terminology resource. Returned preferences are unadopted suggestions.' };
+const tool = { name: 'philosophy_query', title: 'Philosophy terminology lookup', capabilityId: 'query',
+  profile: PROFILE, supportingResources: ['terminology'], skill: 'concept-review',
+  description: 'Query explicitly selected philosophical concepts using the exact captured terminology resource. Returned preferences are unadopted suggestions.' };
+if (!validateTool(tool)) throw new Error('Tool declaration does not match the selected public SDK.');
 for (const [path, value] of [['manifest.json', manifest], ['resources/agent-query-tool.json', tool]]) {
   writeFileSync(new URL(`../${path}`, import.meta.url), JSON.stringify(value, null, 2) + '\n');
 }

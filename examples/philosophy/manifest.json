@@ -150,7 +150,7 @@
       "contribution": {
         "kind": "resource",
         "schema": {
-          "id": "org.tsumugi.examples.capability-tool",
+          "id": "tsumugi.capability-tool-declaration",
           "schemaVersion": 1,
           "behaviorVersion": 1
         },

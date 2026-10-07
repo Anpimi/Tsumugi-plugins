@@ -3,6 +3,7 @@ import { readFileSync } from 'node:fs';
 import test from 'node:test';
 import component from '../components/component.mjs';
 import { createKnowledgeEngine, digest, KnowledgeError, OPERATIONS, PROFILE } from '../components/knowledge.mjs';
+import validateTool from '../../../.cache/sdk/tsumugi-plugin-sdk-0.1.0-alpha.1/javascript/validate-tool-declaration.mjs';
 
 const bytes = readFileSync(new URL('../resources/terminology.json', import.meta.url), 'utf8');
 const engine = createKnowledgeEngine(bytes);
@@ -81,9 +82,16 @@ test('AI tool metadata selects the original capability and does not replace its 
   const manifest = JSON.parse(readFileSync(new URL('../manifest.json', import.meta.url), 'utf8'));
   const metadata = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8'));
   assert.equal(manifest.plugin.version, metadata.version);
-  const selected = manifest.contributions.find(c => c.id === tool.contributionId).contribution.declaration;
-  assert.deepEqual(tool.capability, selected.contract); assert.deepEqual(tool.inputSchema, selected.inputSchema);
-  assert.deepEqual(tool.outputSchema, selected.outputSchema); assert.equal(tool.effect, selected.effect);
+  assert.equal(validateTool(tool), true);
+  assert.deepEqual(Object.keys(tool).sort(), ['name', 'title', 'description', 'capabilityId', 'profile', 'supportingResources', 'skill'].sort());
+  const selected = manifest.contributions.find(c => c.id === tool.capabilityId).contribution.declaration;
+  assert.deepEqual(tool.profile, PROFILE); assert.ok(selected.profiles.some(p => JSON.stringify(p) === JSON.stringify(tool.profile)));
+  assert.equal(selected.effect, 'read-only');
+  assert.deepEqual(tool.supportingResources, ['terminology']); assert.equal(tool.skill, 'concept-review');
+  assert.equal(manifest.contributions.find(c => c.id === tool.supportingResources[0]).contribution.kind, 'resource');
+  assert.equal(manifest.contributions.find(c => c.id === tool.skill).contribution.kind, 'skill');
+  assert.deepEqual(manifest.contributions.find(c => c.id === 'agent-query-tool').contribution.schema,
+    { id: 'tsumugi.capability-tool-declaration', schemaVersion: 1, behaviorVersion: 1 });
   assert.deepEqual(selected.permissions, [{ kind: 'captured-input' }]);
   assert.deepEqual(manifest.components.map(c => c.dependencies), [[], []]);
   assert.equal(manifest.contributions.filter(c => c.contribution.kind === 'skill').length, 1);
