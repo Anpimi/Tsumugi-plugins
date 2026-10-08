@@ -4,6 +4,11 @@
 
 ## [Unreleased]
 
+### 变更
+
+- 从选定的公共 Process-2 SDK 重新构建预编译 Native Worker。旧 Process-1 binary
+  会被拒绝；flat catalog profile 与同一未分发 alpha.1 版本保持不变，无运行时回退。
+
 ### 新增
 
 - 已捕获译文的提取与独立整文件语义检查，保留准确 native 键、语言证据及空文件；

@@ -8,6 +8,13 @@ and Source/Translation/Review/Build Resources; authors do not maintain another w
 a duplicate JSON manifest. The plugin identity is `org.tsumugi.examples / flat-json`.
 This is an experimental, unreleased `0.1.0-alpha.1` example, not a bundled plugin.
 
+The selected public SDK now uses process protocol 2. Rebuild and package this
+Native worker with the current `sdk.lock.json` before using a Process-2 Host;
+the earlier Process-1 binary is refused. This component uses an empty service
+table and requests only captured inputs. The profile and example version remain
+unchanged in the same undistributed alpha.1 batch, with no runtime fallback or
+historical conversion.
+
 ## Current profile
 
 `flat-json-messages` schema/behavior 1/1 accepts one captured `source.json`:

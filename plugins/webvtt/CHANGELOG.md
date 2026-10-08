@@ -26,6 +26,10 @@ This project follows Semantic Versioning. The first package is experimental.
 
 ### Changed
 
+- Prepare SDK helpers and package provenance from the selected public Process-2
+  SDK snapshot. Use the matching Process-2 Host; caption/domain contracts and the
+  same undistributed alpha.1 package version remain unchanged.
+
 - Builds now consume SDK BuildInput and return ArtifactSet. A captured BuildDeclaration makes the independent builder/checker discoverable, and artifact checks return mandatory CheckResults with blocking semantic findings. The previous experimental dedicated build/check JSON is refused without conversion; caption limits and byte fidelity remain unchanged.
 
 - Extraction now emits content-exchange schema 2 / behavior 1, with original cue

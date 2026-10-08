@@ -4,6 +4,12 @@ All notable changes to this experimental example are recorded here.
 
 ## [Unreleased]
 
+### Changed
+
+- Rebuild the prebuilt Native worker from the selected public Process-2 SDK.
+  Earlier Process-1 binaries are refused; the flat catalog profile and same
+  undistributed alpha.1 version are unchanged, with no runtime fallback.
+
 ### Added
 
 - Captured existing-translation extraction and independent complete-file

@@ -20,6 +20,9 @@
 
 ### 变更
 
+- 从选定的公共 Process-2 SDK 快照准备 SDK helper 与包来源，并使用匹配的
+  Process-2 Host；字幕／领域契约和同一未分发 alpha.1 包版本保持不变。
+
 - 构建改为消费 SDK BuildInput 并返回 ArtifactSet；捕获的 BuildDeclaration 使独立构建器和检查器可被发现，产物检查返回必需 CheckResults，语义错误继续阻止采纳。拒绝过去实验专用构建/检查 JSON，不做转换；字幕限制和字节保真承诺不变。
 
 - 提取结果采用 content-exchange schema 2 / behavior 1，提供原 cue ID 显示值与 UTF-8 字节范围。拒绝过去开发结果形状；调用方必须使用同一独立选择的 SDK 产物。

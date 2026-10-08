@@ -4,6 +4,10 @@ The English changelog is authoritative; `CHANGELOG.zh-CN.md` mirrors it.
 
 ## [Unreleased]
 
+- Prepare the public validators and package provenance from the selected
+  Process-2 SDK snapshot for a matching Host. Query/text-review contracts and
+  the same undistributed alpha.1 package version remain unchanged.
+
 - Replace the custom check input/output with the public SDK text-review input
   and report contracts. The existing check capability advances to 2/2; query
   contracts remain 1/1, and the unreleased package remains `0.1.0-alpha.1`.

@@ -39,6 +39,12 @@ Changes to SDK contracts belong in Tsumugi and require a new explicitly selected
 artifact here. The archive contains the public contract/schema harness and
 JavaScript declarations as well as the Rust data API.
 
+The selected snapshot uses process protocol 2. Rebuild prebuilt Native workers
+and prepare JavaScript packages from this SDK before using a Process-2 Host;
+old Process-1 workers are refused without a transport fallback. Manifest and
+content-exchange versions, domain profiles and the undistributed alpha.1 package
+versions are unchanged. This selection does not publish or install a package.
+
 Development snapshots are stored under `artifacts/sdk/<producer-commit>/` so an
 explicitly selected newer snapshot never replaces an earlier archive's bytes.
 Before changing that selection, verify an existing cache against the old lock and

@@ -4,6 +4,11 @@
 
 ## [Unreleased]
 
+### 变更
+
+- 从选定的公共 Process-2 SDK 快照准备 SDK helper 与包来源，并使用匹配的
+  Process-2 Host；SMAPI／领域契约和同一未分发 alpha.1 包版本保持不变。
+
 开发目标：**0.1.0-alpha.1**。尚未发布插件版本。
 
 ### Added

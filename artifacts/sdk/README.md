@@ -72,3 +72,12 @@ JavaScript types and a standalone structural validator. Philosophy preparation
 uses that validator from the verified artifact. Actual captured-package binding,
 current component availability and per-attempt authority remain Host/application
 responsibilities; tool guidance cannot grant them.
+
+The current source selection includes process protocol 2 and its SDK-owned
+service descriptors. Basic Native components use the same protocol with an empty
+service table; the Native helper rejects nonempty services before activation.
+Rebuild a prebuilt Native worker from this selected archive and recapture its
+package for a Process-2 Host. Process-1 workers and environment descriptions are
+refused unchanged. Manifest/content-exchange versions, domain profile contracts,
+and the same undistributed SDK alpha.1 batch remain unchanged. No old-runtime
+fallback, historical migration or release is implied.

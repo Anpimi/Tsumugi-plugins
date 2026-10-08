@@ -4,6 +4,9 @@
 
 ## [Unreleased]
 
+- 从选定的 Process-2 SDK 快照准备公共 validator 与包来源，供匹配的 Host 使用。
+  query／text-review 契约与同一未分发 alpha.1 包版本保持不变。
+
 - 将自有 check 输入／输出替换为公共 SDK 的文本检查输入及报告契约；原检查能力推进至 2/2，query 契约保持 1/1，尚未分发的包继续为 `0.1.0-alpha.1`。
   从原术语资源生成四条 advisory 概念规则及其标题／说明。每次调用须明确选择规则子集，并核对准确 Host provider 和 Resource pins，返回完整状态及 UTF-16 诊断；缺译文保留捕获的 NA 依据或不可用状态，完整报告超限则拒绝而不截断。发现仍为未采纳建议，Core current QA 联合／采纳仍待接入；不为旧自有 check 格式提供兼容回退。
 
