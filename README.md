@@ -16,6 +16,75 @@ Their source-import Resources use schema/behavior 2/2 and select exact immutable
 Review Resources; source/profile rules and checker bindings come from the same
 SDK-pinned package. These packages are experimental candidates; no plugin release is claimed.
 
+## Build and check all independent candidates
+
+The Unix candidate entry uses this repository's existing SDK preparation,
+dependency locks, domain tests and explicit packagers. Install Rust 1.98 or newer,
+Python 3.11 or newer, Node `>=26.10.0 <27`, and pnpm 12.8.1, then run from this
+checkout:
+
+```sh
+mkdir -p artifacts/candidates
+python3 tooling/candidate-build.py --output artifacts/candidates/local
+```
+
+The output directory must be new; existing or partially failed attempts are
+retained and refused on retry. Choose another output name after examining a
+failed attempt. Add `--offline` only when Cargo and pnpm dependencies have been
+prepared. This is an offline *source-build* option, separate from an application's
+offline runtime support.
+
+The entry verifies the **tracked** SDK archive selected by `sdk.lock.json`, runs
+the packaging tests, Rust workspace/public consumer checks and all three Node
+domain suites, and builds four independently versioned candidates: WebVTT,
+SMAPI, philosophy and the Native Rust JSON example. Parser preparation is
+explicit; pnpm installation disables lifecycle scripts. The entry never fetches
+the SDK's producer commit, which is provenance rather than a required publicly
+available source checkout. It does not publish or sign anything.
+
+`candidate-build.json` records the checkout commit and initial dirty state, SDK
+artifact, platform, command results and logs, and each actual candidate's plugin
+identity/version, manifest SHA-256, file/byte counts and deterministic `.tar`
+archive SHA-256. A dirty checkout's results cover that working tree, not its
+unchanged commit alone. Each package retains its own version; there is no common
+repository release version. Archives preserve executable bits and contain only
+the explicit prebuilt package, without dependency caches or Cargo output.
+Test commands retain their actual runner counts and log SHA-256, including on
+failure. Incomplete summaries, zero effective tests and entirely skipped/TODO
+Node suites stop packaging. A Node empty-file success is excluded from effective
+test execution; Rust's individual zero-test suites are allowed only when the
+complete workspace test command executes other non-ignored tests.
+
+Archive SHA-256 is a transport fingerprint, **not** the Host's `packageDigest`.
+Without an inspector, `packageDigest` is null and inspection is `not-run`.
+For an explicitly approved public Host inspector, supply `--inspector`,
+`--inspector-sha256` and `--declared-host-commit` together. The entry verifies and
+captures the binary bytes into a new owner-only attempt-local copy, then runs
+that copy through the existing `tsumugi-plugin-package inspect <directory>`
+interface and matches the returned identity, manifest and complete file/byte
+counts to the actual archive before recording the Host package digest.
+Later changes to the supplied binary path do not replace the captured executable.
+The inspector copy is not included in uploaded candidate artifacts.
+`declaredHostCommit` remains a source declaration:
+`sourceProvenanceNotVerified: true` means the script has not independently proved
+that the supplied binary was compiled from that commit. Inspection runs no
+Worker and grants no installation or execution permission.
+
+The [candidate workflow](.github/workflows/candidate-build.yml) is configured for
+Ubuntu 24.04 and macOS 14 with exact build-tool versions and full-commit-pinned
+Actions. Every change checks all four packages, including changes to shared
+tooling or SDK selection. PR runs use `contents: read`, retain no checkout
+credentials, receive no publication secrets, and have no privileged follow-up
+or release job. Uploaded archives and records are untrusted development
+candidates, not release inputs. No actual hosted run is claimed by this setup.
+
+`runtimeCompatibility` remains `not-run` even after successful inspection.
+Candidate Host × released plugins, candidate plugins × supported Hosts, paired
+application/SDK/plugin combinations, real Worker→Core adoption and final clean
+offline application runs require separate fixed-combination evidence. A green
+independent-build job does not complete those gates or make a package publishable.
+See [中文候选构建说明](README.zh-CN.md) for the same operation and evidence boundaries.
+
 ## Build the independent SDK consumer
 
 Use Rust 1.98 or newer and Python 3.11 or newer. From this checkout:
