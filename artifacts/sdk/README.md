@@ -81,3 +81,12 @@ package for a Process-2 Host. Process-1 workers and environment descriptions are
 refused unchanged. Manifest/content-exchange versions, domain profile contracts,
 and the same undistributed SDK alpha.1 batch remain unchanged. No old-runtime
 fallback, historical migration or release is implied.
+
+The selected snapshot adds the SDK-owned bounded work-plan generation-service
+input, child-identity receipt and finite errors at schema/behavior `1/1`, plus
+exact declared text-query payload preparation. The data contracts grant no
+execution authority and do not change process protocol 2. The producer commit
+and immutable archive digest are recorded in `sdk.lock.json`; prior archives
+remain unchanged. Actual application adapters, current consent and cumulative
+budgets remain application responsibilities. This remains the same unpublished
+SDK `0.1.0-alpha.1` batch.

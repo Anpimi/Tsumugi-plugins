@@ -114,6 +114,10 @@ old Process-1 workers are refused without a transport fallback. Manifest and
 content-exchange versions, domain profiles and the undistributed alpha.1 package
 versions are unchanged. This selection does not publish or install a package.
 
+The selected SDK also includes bounded generation-service data and declared
+text-query payload preparation. These data helpers grant no execution authority;
+see [SDK provenance](artifacts/sdk/README.md) for the current artifact boundary.
+
 Development snapshots are stored under `artifacts/sdk/<producer-commit>/` so an
 explicitly selected newer snapshot never replaces an earlier archive's bytes.
 Before changing that selection, verify an existing cache against the old lock and
