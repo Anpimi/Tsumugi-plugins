@@ -2,10 +2,10 @@
   "formatVersion": 1,
   "package": "tsumugi-plugin-sdk",
   "version": "0.1.0-alpha.1",
-  "archive": "artifacts/sdk/010e2fe2b04599b4ee6de7af812c331939d74216/tsumugi-plugin-sdk-0.1.0-alpha.1.crate",
-  "sha256": "18bafc93a84135fdd5b36987b8b1248dacba241140b7a1ad00045508fa937dac",
+  "archive": "artifacts/sdk/a2da83aaf5645b168b49271c846337e08285e5f7/tsumugi-plugin-sdk-0.1.0-alpha.1.crate",
+  "sha256": "dffc605fd13db2e94ff2506cdbe82a278dda36be97e968565df6d67c20f1334b",
   "sourceRepository": "https://github.com/Anpimi/Tsumugi",
-  "sourceCommit": "010e2fe2b04599b4ee6de7af812c331939d74216",
+  "sourceCommit": "a2da83aaf5645b168b49271c846337e08285e5f7",
   "license": "MIT",
   "publishedToCratesIo": false
 }

@@ -108,9 +108,12 @@ Changes to SDK contracts belong in Tsumugi and require a new explicitly selected
 artifact here. The archive contains the public contract/schema harness and
 JavaScript declarations as well as the Rust data API.
 
-The selected snapshot uses process protocol 2. Rebuild prebuilt Native workers
-and prepare JavaScript packages from this SDK before using a Process-2 Host;
-old Process-1 workers are refused without a transport fallback. Manifest and
+The selected snapshot uses process protocol 3. Rebuild prebuilt Native workers
+and prepare JavaScript packages from this SDK before using a Process-3 Host;
+old Process-1/2 workers are refused without a transport fallback. JavaScript
+entries register each exact contribution from the frozen component roster. The
+three default components retain their Project scope; the Native helper remains
+explicitly singleton. Manifest and
 content-exchange versions, domain profiles and the undistributed alpha.1 package
 versions are unchanged. This selection does not publish or install a package.
 

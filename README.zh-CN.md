@@ -53,3 +53,8 @@ PR 只有 `contents: read`，checkout 不保留凭据，无发布密钥、特权
 已发布插件、候选插件与支持的 Host、固定应用/SDK/插件组合、真实
 Worker→Core 采纳及清洁离线应用验收，需要各自的独立证据；候选构建绿灯
 不能替代这些门禁，也不证明已具备发布条件。
+
+当前选定的 SDK 使用 Process3：JavaScript 入口按冻结集合逐项 `register(id, handler)`，
+三个默认组件仍为 Project scope，Native helper 仅支持单项集合。应从此 SDK 重新准备
+JavaScript 包并重建 Native Worker，旧 Process1/2 明确拒绝；领域契约和同一未分发
+alpha.1 包版本保持不变。本选择不发布或安装插件。

@@ -6,8 +6,12 @@ English is authoritative; [简体中文](CHANGELOG.zh-CN.md) mirrors these chang
 
 ### Changed
 
-- Prepare SDK helpers and package provenance from the selected public Process-2
-  SDK snapshot. Use the matching Process-2 Host; SMAPI/domain contracts and the
+- Register the exact callable roster through the public `contributions` and
+  `register(id, handler)` API. Setup and shutdown use Process-3 component
+  identity; default Project scope and domain behavior remain unchanged.
+
+- Prepare SDK helpers and package provenance from the selected public Process-3
+  SDK snapshot. Use the matching Process-3 Host; SMAPI/domain contracts and the
   same undistributed alpha.1 package version remain unchanged.
 
 Development target: **0.1.0-alpha.1**. No plugin release has been published.

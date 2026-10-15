@@ -1,5 +1,13 @@
 # SMAPI flat translation package
 
+The entrypoint uses the current Process3 SDK facade: `api.instance`, the frozen
+`api.contributions` roster, and `api.register(contributionId, handler)`. It
+registers exactly the members selected by the Host, with no singleton API
+fallback. Callable components retain their declared **Project** scope; adapting
+the entrypoint does not enable an Application instance or authorize additional
+operations. Use the current paired SDK and Host artifacts; older Process2
+runtime captures cannot execute this facade.
+
 Experimental independent package `org.tsumugi/stardew-smapi` `0.1.0-alpha.1`.
 It consumes the pinned public SDK and runs through the same JavaScript component
 Host as other packages. No Core, project database, Mod DLL or game is loaded.

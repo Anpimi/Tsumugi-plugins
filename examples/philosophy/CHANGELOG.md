@@ -4,8 +4,14 @@ The English changelog is authoritative; `CHANGELOG.zh-CN.md` mirrors it.
 
 ## [Unreleased]
 
+### Changed
+
+- Register the exact callable roster through the public `contributions` and
+  `register(id, handler)` API. Setup and shutdown use Process-3 component
+  identity; default Project scope and domain behavior remain unchanged.
+
 - Prepare the public validators and package provenance from the selected
-  Process-2 SDK snapshot for a matching Host. Query/text-review contracts and
+  Process-3 SDK snapshot for a matching Host. Query/text-review contracts and
   the same undistributed alpha.1 package version remain unchanged.
 
 - Replace the custom check input/output with the public SDK text-review input

@@ -27,73 +27,75 @@ const operations = new Map([
 /** @type {ComponentModule} */
 const component = {
   activate(api) {
-    const id = api.contribution.id;
-    const operation = operations.get(id);
-    const contract = api.contribution.contract;
-    if (!operation || contract.id !== operation.contract || contract.schemaVersion !== 1 || contract.behaviorVersion !== 1) {
-      throw new Error('Unsupported selected SMAPI contribution.');
-    }
-    api.register((payload, metadata) => {
-      let input;
-      try {
-        if (metadata.signal.aborted || api.signal.aborted) throw new SmapiError('cancelled', 'Operation cancelled.');
-        if (payload.schema.id !== operation.input || payload.schema.schemaVersion !== 1 || payload.schema.behaviorVersion !== 1
-          || metadata.profile?.id !== 'smapi-i18n-flat' || metadata.profile.schemaVersion !== 1 || metadata.profile.behaviorVersion !== 1
-          || typeof payload.utf8 !== 'string' || !payload.utf8.isWellFormed()) {
-          throw new SmapiError('invalid-input', 'Captured invocation schema or profile mismatch.');
-        }
-        const inputLimit = id === 'extract-source' || id === 'import-translations' ? MAX_PAYLOAD_BYTES : MAX_CHECK_BYTES;
-        if (Buffer.byteLength(payload.utf8) > inputLimit) throw new SmapiError('limit-exceeded', 'Encoded operation input exceeds its captured byte limit.');
-        try { input = JSON.parse(payload.utf8); }
-        catch { throw new SmapiError('invalid-input', 'Invalid operation JSON.'); }
-        if (id === 'extract-source' && !validateSourceExtractionInput(input)) {
-          throw new SmapiError('invalid-input', 'Operation input does not match the SDK schema.');
-        }
-        if (id === 'source-semantic-check' && !validateSourceExtractionCheckInput(input)) {
-          throw new SmapiError('invalid-input', 'Operation input does not match the SDK schema.');
-        }
-        if ((id === 'import-translations' && !validateTranslationExtractionInput(input))
-          || (id === 'translation-semantic-check' && !validateTranslationExtractionCheckInput(input))) {
-          throw new SmapiError('invalid-input', 'Operation input does not match the SDK schema.');
-        }
-        if ((id === 'build' && !validateBuildInput(input)) || (id === 'validate-artifact' && !validateArtifactCheckInput(input))) {
-          throw new SmapiError('invalid-input', 'Operation input does not match the SDK schema.');
-        }
-        if (id === 'review-check' && !validateReviewCheckInput(input)) {
-          throw new SmapiError('invalid-input', 'Review input does not match the SDK schema.');
-        }
-        const output = operation.handler(input, metadata.signal);
-        if (id === 'import-translations' && !validateTranslationExchange(output)) {
-          throw new Error('Translation handler result violates the SDK structure.');
-        }
-        if (metadata.signal.aborted || api.signal.aborted) throw new SmapiError('cancelled', 'Operation cancelled.');
-        return { kind: 'succeeded', utf8: encoded(output) };
-      } catch (error) {
-        if (!(error instanceof SmapiError)) throw error;
-        if (id === 'review-check') {
-          const code = error.code === 'invalid-payload' ? 'invalid-translation' : error.code;
-          const supported = new Set(['invalid-input', 'unsupported-profile', 'invalid-source', 'invalid-translation', 'unsupported-structure', 'limit-exceeded', 'cancelled']);
-          const unit = input?.selections?.[0]?.unitId;
-          return { kind: 'failed', utf8: encoded({ code: supported.has(code) ? code : 'invalid-input',
-            unitId: typeof unit === 'string' && /^[A-Za-z0-9._:/-]{1,128}$/.test(unit) ? unit : null, detail: error.detail }) };
-        }
-        if (id === 'extract-source' || id === 'source-semantic-check' || id === 'import-translations' || id === 'translation-semantic-check') {
-          const captured = id === 'source-semantic-check' ? input?.source : id === 'translation-semantic-check' ? input?.input : input;
-          const artifactId = captured?.artifacts?.[0]?.id;
-          /** @type {SourceExtractionError} */
-          const result = {
-            code: extractionCodes.has(error.code) ? error.code : 'invalid-input',
-            artifactId: typeof artifactId === 'string' && /^[A-Za-z0-9._:/-]{1,128}$/.test(artifactId) ? artifactId : null,
-            detail: error.detail,
-          };
-          return { kind: 'failed', utf8: encoded(result) };
-        }
-        const code = buildCode(error.code);
-        const artifactId = id === 'validate-artifact' ? input?.output?.artifacts?.[0]?.id : null;
-        return { kind: 'failed', utf8: encoded({ code: buildCodes.has(code) ? code : 'invalid-input',
-          artifactId: typeof artifactId === 'string' && /^[A-Za-z0-9._:/-]{1,128}$/.test(artifactId) ? artifactId : null, detail: error.detail }) };
+    for (const contribution of api.contributions) {
+      const id = contribution.id;
+      const operation = operations.get(id);
+      const contract = contribution.contract;
+      if (!operation || contract.id !== operation.contract || contract.schemaVersion !== 1 || contract.behaviorVersion !== 1) {
+        throw new Error('Unsupported selected SMAPI contribution.');
       }
-    });
+      api.register(id, (payload, metadata) => {
+        let input;
+        try {
+          if (metadata.signal.aborted || api.signal.aborted) throw new SmapiError('cancelled', 'Operation cancelled.');
+          if (payload.schema.id !== operation.input || payload.schema.schemaVersion !== 1 || payload.schema.behaviorVersion !== 1
+            || metadata.profile?.id !== 'smapi-i18n-flat' || metadata.profile.schemaVersion !== 1 || metadata.profile.behaviorVersion !== 1
+            || typeof payload.utf8 !== 'string' || !payload.utf8.isWellFormed()) {
+            throw new SmapiError('invalid-input', 'Captured invocation schema or profile mismatch.');
+          }
+          const inputLimit = id === 'extract-source' || id === 'import-translations' ? MAX_PAYLOAD_BYTES : MAX_CHECK_BYTES;
+          if (Buffer.byteLength(payload.utf8) > inputLimit) throw new SmapiError('limit-exceeded', 'Encoded operation input exceeds its captured byte limit.');
+          try { input = JSON.parse(payload.utf8); }
+          catch { throw new SmapiError('invalid-input', 'Invalid operation JSON.'); }
+          if (id === 'extract-source' && !validateSourceExtractionInput(input)) {
+            throw new SmapiError('invalid-input', 'Operation input does not match the SDK schema.');
+          }
+          if (id === 'source-semantic-check' && !validateSourceExtractionCheckInput(input)) {
+            throw new SmapiError('invalid-input', 'Operation input does not match the SDK schema.');
+          }
+          if ((id === 'import-translations' && !validateTranslationExtractionInput(input))
+            || (id === 'translation-semantic-check' && !validateTranslationExtractionCheckInput(input))) {
+            throw new SmapiError('invalid-input', 'Operation input does not match the SDK schema.');
+          }
+          if ((id === 'build' && !validateBuildInput(input)) || (id === 'validate-artifact' && !validateArtifactCheckInput(input))) {
+            throw new SmapiError('invalid-input', 'Operation input does not match the SDK schema.');
+          }
+          if (id === 'review-check' && !validateReviewCheckInput(input)) {
+            throw new SmapiError('invalid-input', 'Review input does not match the SDK schema.');
+          }
+          const output = operation.handler(input, metadata.signal);
+          if (id === 'import-translations' && !validateTranslationExchange(output)) {
+            throw new Error('Translation handler result violates the SDK structure.');
+          }
+          if (metadata.signal.aborted || api.signal.aborted) throw new SmapiError('cancelled', 'Operation cancelled.');
+          return { kind: 'succeeded', utf8: encoded(output) };
+        } catch (error) {
+          if (!(error instanceof SmapiError)) throw error;
+          if (id === 'review-check') {
+            const code = error.code === 'invalid-payload' ? 'invalid-translation' : error.code;
+            const supported = new Set(['invalid-input', 'unsupported-profile', 'invalid-source', 'invalid-translation', 'unsupported-structure', 'limit-exceeded', 'cancelled']);
+            const unit = input?.selections?.[0]?.unitId;
+            return { kind: 'failed', utf8: encoded({ code: supported.has(code) ? code : 'invalid-input',
+              unitId: typeof unit === 'string' && /^[A-Za-z0-9._:/-]{1,128}$/.test(unit) ? unit : null, detail: error.detail }) };
+          }
+          if (id === 'extract-source' || id === 'source-semantic-check' || id === 'import-translations' || id === 'translation-semantic-check') {
+            const captured = id === 'source-semantic-check' ? input?.source : id === 'translation-semantic-check' ? input?.input : input;
+            const artifactId = captured?.artifacts?.[0]?.id;
+            /** @type {SourceExtractionError} */
+            const result = {
+              code: extractionCodes.has(error.code) ? error.code : 'invalid-input',
+              artifactId: typeof artifactId === 'string' && /^[A-Za-z0-9._:/-]{1,128}$/.test(artifactId) ? artifactId : null,
+              detail: error.detail,
+            };
+            return { kind: 'failed', utf8: encoded(result) };
+          }
+          const code = buildCode(error.code);
+          const artifactId = id === 'validate-artifact' ? input?.output?.artifacts?.[0]?.id : null;
+          return { kind: 'failed', utf8: encoded({ code: buildCodes.has(code) ? code : 'invalid-input',
+            artifactId: typeof artifactId === 'string' && /^[A-Za-z0-9._:/-]{1,128}$/.test(artifactId) ? artifactId : null, detail: error.detail }) };
+        }
+      });
+    }
   },
 };
 export default component;

@@ -73,11 +73,11 @@ uses that validator from the verified artifact. Actual captured-package binding,
 current component availability and per-attempt authority remain Host/application
 responsibilities; tool guidance cannot grant them.
 
-The current source selection includes process protocol 2 and its SDK-owned
+The current source selection includes process protocol 3 and its SDK-owned
 service descriptors. Basic Native components use the same protocol with an empty
 service table; the Native helper rejects nonempty services before activation.
 Rebuild a prebuilt Native worker from this selected archive and recapture its
-package for a Process-2 Host. Process-1 workers and environment descriptions are
+package for a Process-3 Host. Process-1/2 workers and environment descriptions are
 refused unchanged. Manifest/content-exchange versions, domain profile contracts,
 and the same undistributed SDK alpha.1 batch remain unchanged. No old-runtime
 fallback, historical migration or release is implied.
@@ -85,8 +85,14 @@ fallback, historical migration or release is implied.
 The selected snapshot adds the SDK-owned bounded work-plan generation-service
 input, child-identity receipt and finite errors at schema/behavior `1/1`, plus
 exact declared text-query payload preparation. The data contracts grant no
-execution authority and do not change process protocol 2. The producer commit
+execution authority and do not change the separate process protocol. The producer commit
 and immutable archive digest are recorded in `sdk.lock.json`; prior archives
 remain unchanged. Actual application adapters, current consent and cumulative
 budgets remain application responsibilities. This remains the same unpublished
 SDK `0.1.0-alpha.1` batch.
+
+The selected Process-3 artifact freezes a bounded component capability roster
+and a component instance principal separately from each invocation provider.
+JavaScript setup uses `contributions` and `register(id, handler)`; the Native
+facade rejects a multi-member activation before calling author code. These
+contracts grant no execution permission and do not widen default Project scopes.

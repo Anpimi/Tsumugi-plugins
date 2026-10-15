@@ -5,6 +5,11 @@
 
 ## [Unreleased]
 
+### Changed
+
+- 通过公共 `contributions` 与 `register(id, handler)` API 登记准确能力集合；
+  setup／退出使用 Process-3 组件身份，默认 Project 作用域及领域行为保持不变。
+
 ### 新增
 
 - 每条 cue 增加带原始 UTF-8 范围的提取时间事实。独立源检查器拒绝缺失或伪造的事实；纯文本字幕 profile 不推断说话者、角色或场景。修订身份仍采用语义 cue 依据；仅修改 NOTE、换行或 cue 位置不会使未变的 cue 过期。
@@ -22,8 +27,8 @@
 
 ### 变更
 
-- 从选定的公共 Process-2 SDK 快照准备 SDK helper 与包来源，并使用匹配的
-  Process-2 Host；字幕／领域契约和同一未分发 alpha.1 包版本保持不变。
+- 从选定的公共 Process-3 SDK 快照准备 SDK helper 与包来源，并使用匹配的
+  Process-3 Host；字幕／领域契约和同一未分发 alpha.1 包版本保持不变。
 
 - 构建改为消费 SDK BuildInput 并返回 ArtifactSet；捕获的 BuildDeclaration 使独立构建器和检查器可被发现，产物检查返回必需 CheckResults，语义错误继续阻止采纳。拒绝过去实验专用构建/检查 JSON，不做转换；字幕限制和字节保真承诺不变。
 

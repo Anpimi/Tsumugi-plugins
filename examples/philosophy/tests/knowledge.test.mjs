@@ -8,6 +8,8 @@ import { createToolQuery } from '../../../.cache/sdk/tsumugi-plugin-sdk-0.1.0-al
 
 const bytes = readFileSync(new URL('../resources/terminology.json', import.meta.url), 'utf8');
 const engine = createKnowledgeEngine(bytes);
+const packageManifest = JSON.parse(readFileSync(new URL('../manifest.json', import.meta.url), 'utf8'));
+const componentInstance = { plugin: packageManifest.plugin, componentId: 'knowledge', packageDigest: 'a'.repeat(64), instanceId: 'synthetic-channel', activationGeneration: 1 };
 const query = (text = 'sound premises and a valid inference') => ({ resource: structuredClone(engine.pin),
   sourceLanguage: 'en', targetLanguage: 'zh-CN', queries: [{ id: 'u-1', text, conceptIds: ['soundness', 'premise', 'validity', 'inference'] }] });
 const check = (translationText = '可靠性的前提与有效性推理') => ({ resource: structuredClone(engine.pin),
@@ -68,8 +70,8 @@ test('resource capture is independent of a later caller mutation', () => {
 test('SDK query component preserves its original input and output bindings', () => {
   for (const operation of ['query']) {
     let handler; const scope = new AbortController(); const signal = new AbortController();
-    component.activate({ contribution: { id: operation, contract: OPERATIONS[operation].contract }, signal: scope.signal,
-      register(h) { assert.equal(handler, undefined); handler = h; }, onDispose() {} });
+    component.activate({ instance: componentInstance, services: [], contributions: [{ id: operation, contract: OPERATIONS[operation].contract }], signal: scope.signal,
+      register(id, h) { assert.equal(id, operation); assert.equal(handler, undefined); handler = h; }, onDispose() {} });
     const input = query();
     const payload = { schema: OPERATIONS[operation].input, utf8: JSON.stringify(input), sha256: digest(JSON.stringify(input)) };
     const metadata = { profile: PROFILE, signal: signal.signal, context: {} };
@@ -108,8 +110,8 @@ test('public text-query presentation uses the original SDK component for single,
   assert.deepEqual(presentation.query.selections.options.map(option => option.value), JSON.parse(bytes).concepts.map(concept => concept.id));
   let handler;
   const signal = new AbortController().signal;
-  component.activate({ contribution: { id: 'query', contract: OPERATIONS.query.contract }, signal,
-    register(value) { handler = value; }, onDispose() {} });
+  component.activate({ instance: componentInstance, services: [], contributions: [{ id: 'query', contract: OPERATIONS.query.contract }], signal,
+    register(id, value) { assert.equal(id, 'query'); assert.equal(handler, undefined); handler = value; }, onDispose() {} });
   const execute = input => {
     const utf8 = JSON.stringify(input);
     const result = handler({ schema: OPERATIONS.query.input, utf8, sha256: digest(utf8) }, { profile: PROFILE, signal, context: {} });
@@ -135,4 +137,16 @@ test('public text-query presentation uses the original SDK component for single,
   assert.equal(refused.result.kind, 'failed');
   assert.deepEqual(tool.query.inputTemplate, template);
   assert.equal(completed.value.basis.authority, 'unadopted-editorial-suggestion');
+});
+
+
+test('each declared Project capability registers its exact current facade ID', () => {
+  for (const selected of packageManifest.contributions.filter(value => value.contribution.kind === 'capability')) {
+    const registered = [];
+    component.activate({ instance: componentInstance, services: [], signal: new AbortController().signal,
+      contributions: [{ id: selected.id, contract: selected.contribution.declaration.contract }], onDispose() {},
+      register(id, handler) { assert.equal(typeof handler, 'function'); registered.push(id); } });
+    assert.deepEqual(registered, [selected.id]);
+    assert.equal(packageManifest.components.find(value => value.id === selected.componentId).scope, 'project');
+  }
 });

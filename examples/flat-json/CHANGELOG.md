@@ -6,8 +6,11 @@ All notable changes to this experimental example are recorded here.
 
 ### Changed
 
-- Rebuild the prebuilt Native worker from the selected public Process-2 SDK.
-  Earlier Process-1 binaries are refused; the flat catalog profile and same
+- The public Native facade rejects multi-member activation before author code
+  runs; this package continues to use its original singleton profile.
+
+- Rebuild the prebuilt Native worker from the selected public Process-3 SDK.
+  Earlier Process-1/2 binaries are refused; the flat catalog profile and same
   undistributed alpha.1 version are unchanged, with no runtime fallback.
 
 ### Added

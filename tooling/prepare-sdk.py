@@ -6,6 +6,7 @@ import io
 import json
 import os
 from pathlib import Path, PurePosixPath
+import re
 import shutil
 import stat
 import sys
@@ -119,38 +120,99 @@ def prepare(root: Path) -> Path:
     return destination
 
 
-def prepare_context_helpers(root: Path, sdk: Path) -> None:
-    """Stage the SDK-owned runtime encoder for source-tree domain tests.
+def bounded_helper_file(path: Path, limit: int) -> bytes:
+    flags = os.O_RDONLY
+    if os.name == "posix":
+        flags |= os.O_NOFOLLOW | os.O_NONBLOCK
+    elif os.name == "nt":
+        flags |= os.O_BINARY
+    with os.fdopen(os.open(path, flags), "rb") as stream:
+        before = os.fstat(stream.fileno())
+        if (not stat.S_ISREG(before.st_mode) or before.st_nlink != 1
+                or before.st_size > limit):
+            raise ValueError("SDK helper input is not a bounded ordinary file")
+        data = stream.read(limit + 1)
+        after = os.fstat(stream.fileno())
+        selected = path.stat(follow_symlinks=False)
+        identity = lambda info: (info.st_dev, info.st_ino, info.st_mode, info.st_size,
+                                 info.st_mtime_ns, info.st_ctime_ns, info.st_nlink)
+        if (len(data) > limit or len(data) != after.st_size
+                or identity(before) != identity(after) or identity(after) != identity(selected)):
+            raise ValueError("SDK helper input changed or exceeded its bound")
+        return data
 
-    The packager takes the same files directly from the pinned archive.
-    """
-    helpers = (
-        "source-context.mjs",
-        "source-context-profile.mjs",
-        "validate-source-context-facts.mjs",
-    )
+
+def prepare_context_helpers(root: Path, sdk: Path) -> None:
+    """Stage the same SDK helpers selected by each domain's package recipe."""
+    def unique(pairs):
+        result = {}
+        for name, value in pairs:
+            if name in result:
+                raise ValueError("duplicate SDK helper recipe field")
+            result[name] = value
+        return result
+
     plugins = root / "plugins"
     if plugins.is_symlink():
         raise ValueError("Plugin helper parent is a link")
+    javascript = sdk / "javascript"
+    copies = []
     for package in ("webvtt", "stardew-smapi"):
         plugin = plugins / package
         if plugin.is_symlink():
             raise ValueError("Plugin helper destination is a link")
         if not plugin.is_dir():
             continue
+        recipe = json.loads(bounded_helper_file(plugin / "package-files.json", 256 * 1024),
+                            object_pairs_hook=unique)
+        if (not isinstance(recipe, dict) or set(recipe) != {"formatVersion", "files", "sdkFiles"}
+                or type(recipe["formatVersion"]) is not int or recipe["formatVersion"] != 1
+                or not isinstance(recipe["files"], list) or not 2 <= len(recipe["files"]) <= 256
+                or any(not isinstance(name, str) for name in recipe["files"])
+                or not isinstance(recipe["sdkFiles"], list) or len(recipe["sdkFiles"]) > 32):
+            raise ValueError("unsupported SDK helper recipe")
         directory = plugin / "sdk"
         if directory.is_symlink() or (directory.exists() and not directory.is_dir()):
             raise ValueError("SDK helper destination is not an ordinary directory")
-        directory.mkdir(exist_ok=True)
-        for name in helpers:
-            source = sdk / "javascript" / name
-            target = directory / name
+        sources, targets = set(), set()
+        for selected in recipe["sdkFiles"]:
+            if (not isinstance(selected, dict) or set(selected) != {"source", "target"}
+                    or not isinstance(selected["source"], str)
+                    or not isinstance(selected["target"], str)
+                    or re.fullmatch(r"(?:LICENSE|javascript/[a-z0-9-]+\.mjs)", selected["source"]) is None
+                    or re.fullmatch(r"sdk/(?:LICENSE|[a-z0-9-]+\.mjs)", selected["target"]) is None
+                    or selected["source"] in sources or selected["target"] in targets):
+                raise ValueError("invalid or duplicate SDK helper selector")
+            sources.add(selected["source"])
+            targets.add(selected["target"])
+            if selected["source"].startswith("javascript/") and (
+                    javascript.is_symlink() or not javascript.is_dir()):
+                raise ValueError("SDK helper source is not an ordinary directory")
+            source = sdk.joinpath(*PurePosixPath(selected["source"]).parts)
+            target = plugin.joinpath(*PurePosixPath(selected["target"]).parts)
             if target.is_symlink() or (target.exists() and not target.is_file()):
                 raise ValueError("SDK helper destination is not an ordinary file")
-            data = source.read_bytes()
-            if target.exists() and target.read_bytes() == data:
+            data = bounded_helper_file(source, 1024 * 1024)
+            if target.exists() and bounded_helper_file(target, 1024 * 1024) == data:
                 continue
-            target.write_bytes(data)
+            copies.append((target, data))
+    # Reject every recipe/selector before modifying any ignored helper output.
+    for target, data in copies:
+        target.parent.mkdir(exist_ok=True)
+        if target.parent.is_symlink() or not target.parent.is_dir():
+            raise ValueError("SDK helper destination is not an ordinary directory")
+        flags = os.O_WRONLY | os.O_CREAT
+        if os.name == "posix":
+            flags |= os.O_NOFOLLOW | os.O_NONBLOCK
+        elif os.name == "nt":
+            flags |= os.O_BINARY
+        with os.fdopen(os.open(target, flags, 0o600), "wb") as stream:
+            info = os.fstat(stream.fileno())
+            if (not stat.S_ISREG(info.st_mode) or info.st_nlink != 1
+                    or info.st_size > 1024 * 1024):
+                raise ValueError("SDK helper destination is not a bounded ordinary file")
+            stream.truncate(0)
+            stream.write(data)
 
 
 if __name__ == "__main__":

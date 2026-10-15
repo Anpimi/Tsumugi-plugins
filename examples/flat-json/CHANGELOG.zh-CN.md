@@ -4,9 +4,13 @@
 
 ## [Unreleased]
 
+### Changed
+
+- 公共 Native facade 在执行作者代码前拒绝多成员激活，本包继续使用原单项 profile。
+
 ### 变更
 
-- 从选定的公共 Process-2 SDK 重新构建预编译 Native Worker。旧 Process-1 binary
+- 从选定的公共 Process-3 SDK 重新构建预编译 Native Worker。旧 Process-1/2 binary
   会被拒绝；flat catalog profile 与同一未分发 alpha.1 版本保持不变，无运行时回退。
 
 ### 新增

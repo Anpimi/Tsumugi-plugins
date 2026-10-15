@@ -36,8 +36,9 @@ const fails = (input, expected = 'invalid-input', selectedMetadata = metadata())
 };
 const activate = signal => {
   let handler;
-  component.activate({ contribution: { id: 'check', contract: OPERATIONS.check.contract }, signal,
-    register(value) { assert.equal(handler, undefined); handler = value; }, onDispose() {} });
+  const { contributionId, ...instance } = actualProvider();
+  component.activate({ instance, services: [], contributions: [{ id: 'check', contract: OPERATIONS.check.contract }], signal,
+    register(id, value) { assert.equal(id, 'check'); assert.equal(handler, undefined); handler = value; }, onDispose() {} });
   return handler;
 };
 const invoke = (handler, input, selectedMetadata = metadata()) => {

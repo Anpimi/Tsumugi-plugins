@@ -4,7 +4,12 @@
 
 ## [Unreleased]
 
-- 从选定的 Process-2 SDK 快照准备公共 validator 与包来源，供匹配的 Host 使用。
+### Changed
+
+- 通过公共 `contributions` 与 `register(id, handler)` API 登记准确能力集合；
+  setup／退出使用 Process-3 组件身份，默认 Project 作用域及领域行为保持不变。
+
+- 从选定的 Process-3 SDK 快照准备公共 validator 与包来源，供匹配的 Host 使用。
   query／text-review 契约与同一未分发 alpha.1 包版本保持不变。
 
 - 将自有 check 输入／输出替换为公共 SDK 的文本检查输入及报告契约；原检查能力推进至 2/2，query 契约保持 1/1，尚未分发的包继续为 `0.1.0-alpha.1`。
