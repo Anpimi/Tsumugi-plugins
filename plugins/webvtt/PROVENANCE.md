@@ -28,6 +28,9 @@ reparses captured material and checks complete proposal references, original ID
 display/ranges and exact required basis blocks through the SDK's standard check
 results. Its literal source-check fixture is an independently authored oracle;
 it does not use extractor output to define the expected source semantics.
+The caption source-context interpretation is package-owned: accepted timing
+tokens and original byte ranges yield extracted time facts. The SDK owns the
+fact shape and bounded encoder; no voice, role or scene is inferred from text.
 
 Shared component, invocation and content types come from the exact SDK artifact
 selected by the repository's `sdk.lock.json`. Generated SDK files and cached

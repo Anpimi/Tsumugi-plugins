@@ -23,6 +23,10 @@ source/target payload. Only payload ranges change during building. The checker
 reparses actual bytes and verifies all non-payload bytes independently of the
 builder. The source verifier independently reparses captured source and checks
 full cue coverage, text, byte ranges, identity/display and required basis blocks.
+It also verifies one extracted, source-referenced time fact per cue without
+claiming a speaker or scene from plain caption text. Revision identity uses
+the existing semantic cue-basis block; the time fact's changing source offset
+does not invalidate an otherwise unchanged cue.
 See [contracts](docs/contracts.md), [manifest](manifest.json),
 [source provenance](PROVENANCE.md) and [license](LICENSE).
 
@@ -32,7 +36,9 @@ Use Node `>=26.10.0 <27`. There is no transpilation step: the runtime components
 are ESM `.mjs` files. From the plugin repository, prepare the exact selected SDK
 with `python3 tooling/prepare-sdk.py`; JSDoc type references resolve only to that
 verified `.cache/sdk/` artifact, never another source checkout. Common SDK types
-are erased development references and create no Node runtime import. The public
+are erased development references. Source context encoding is a runtime import
+from the exact pinned SDK helper, staged by `prepare-sdk.py` for source-tree tests
+and copied from the verified archive into the candidate package. The public
 packager also materializes the SDK-generated standalone extraction, source-check, build and artifact-check
 validators and their license from the same verified artifact, recording its lock.
 This is a derived SDK dependency, not a hand-edited protocol copy. The component uses JSON.parse:
@@ -79,7 +85,8 @@ The source-check rule is mandatory and cannot be waived in this profile. A
 completed check containing an error finding still blocks semantic acceptance.
 Captured requirements must be independent of the proposal, and the Host binds
 actual provider/channel evidence. Source and proposal together must fit the
-4 MiB check-input limit; source and proposal each retain their 2 MiB limit.
+4 MiB check-input limit; captured source retains its 2 MiB limit and the
+complete context-bearing proposal has a 4 MiB content limit.
 Oversized combinations are rejected without truncation.
 
 The current component is not an OS sandbox. A Node process can access operating

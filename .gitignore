@@ -1,6 +1,8 @@
 .cache/
 node_modules/
 .generated/
+plugins/webvtt/sdk/
+plugins/stardew-smapi/sdk/
 target/
 .worktrees/
 .DS_Store

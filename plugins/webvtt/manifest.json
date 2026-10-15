@@ -65,7 +65,7 @@
           ],
           "limits": {
             "maxInputBytes": 2097152,
-            "maxOutputBytes": 2097152,
+            "maxOutputBytes": 4194304,
             "concurrency": 1,
             "timeoutMs": 30000
           }

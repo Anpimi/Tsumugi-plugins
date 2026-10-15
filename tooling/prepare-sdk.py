@@ -100,6 +100,7 @@ def prepare(root: Path) -> Path:
                 found[key] = path.read_bytes()
         if found != files:
             raise ValueError("SDK cache differs from the selected artifact; remove it explicitly")
+        prepare_context_helpers(root, destination)
         return destination
 
     candidate = Path(tempfile.mkdtemp(prefix="prepare-", dir=sdk_cache))
@@ -114,7 +115,42 @@ def prepare(root: Path) -> Path:
         (candidate / package).rename(destination)
     finally:
         shutil.rmtree(candidate)
+    prepare_context_helpers(root, destination)
     return destination
+
+
+def prepare_context_helpers(root: Path, sdk: Path) -> None:
+    """Stage the SDK-owned runtime encoder for source-tree domain tests.
+
+    The packager takes the same files directly from the pinned archive.
+    """
+    helpers = (
+        "source-context.mjs",
+        "source-context-profile.mjs",
+        "validate-source-context-facts.mjs",
+    )
+    plugins = root / "plugins"
+    if plugins.is_symlink():
+        raise ValueError("Plugin helper parent is a link")
+    for package in ("webvtt", "stardew-smapi"):
+        plugin = plugins / package
+        if plugin.is_symlink():
+            raise ValueError("Plugin helper destination is a link")
+        if not plugin.is_dir():
+            continue
+        directory = plugin / "sdk"
+        if directory.is_symlink() or (directory.exists() and not directory.is_dir()):
+            raise ValueError("SDK helper destination is not an ordinary directory")
+        directory.mkdir(exist_ok=True)
+        for name in helpers:
+            source = sdk / "javascript" / name
+            target = directory / name
+            if target.is_symlink() or (target.exists() and not target.is_file()):
+                raise ValueError("SDK helper destination is not an ordinary file")
+            data = source.read_bytes()
+            if target.exists() and target.read_bytes() == data:
+                continue
+            target.write_bytes(data)
 
 
 if __name__ == "__main__":

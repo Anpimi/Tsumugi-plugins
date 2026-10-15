@@ -12,6 +12,7 @@ const json = name => JSON.parse(fixture(name));
 const ref = id => ({ id, schemaVersion: 1, behaviorVersion: 1 });
 const clone = structuredClone;
 const baseManifest = '{"UniqueID":"Example.Mod","Name":"Test","Version":"1.0.0","EntryDll":"Test.dll"}';
+const SOURCE_IMPORT = JSON.parse(readFileSync(new URL('../profiles/source-import.json', import.meta.url), 'utf8'));
 const original = '\ufeff{\r\n // retained 中文 😀\r\n "MiX\\u0041": "Hi {{name}} 👩🏽‍💻 é",\r\n "same-a": "same",\r\n "same-b": "same",\r\n "empty": "",\r\n "$schema": "schema.json",\r\n}\r\n';
 const captured = (raw = original, manifest = baseManifest) => ({ profile: { ...PROFILE }, sourceSetId: 'synthetic-set', sourceLanguage: 'en', artifacts: [
   { id: 'manifest', logicalPath: 'manifest.json', role: 'companion', sha256: sha256(manifest), utf8: manifest },
@@ -50,6 +51,36 @@ test('licensed 532-entry source matches the independent .NET oracle and original
   }
   const result = checkSourceSemantics(sourceCheck(source, exchange));
   assert.deepEqual(result[0].outcome.findings, [{ code: 'source-template', target: source.sourceSetId, severity: 'warning' }]);
+  const block = exchange.domainBlocks[0];
+  assert.equal(block.target.kind, 'snapshot');
+  const [name] = JSON.parse(block.payloadUtf8).facts;
+  assert.deepEqual({ id: name.id, kind: name.kind, origin: name.origin.kind },
+    { id: 'manifest-name', kind: 'note', origin: 'extracted' });
+  assert.equal(JSON.parse(Buffer.from(source.artifacts[0].utf8).subarray(
+    name.origin.sources[0].range.start, name.origin.sources[0].range.end).toString()), name.text);
+  assert.equal(exchange.domainBlocks[1].schema.id, 'smapi.manifest-context-basis');
+  assert.equal(exchange.domainBlocks[1].payloadUtf8, JSON.stringify({ version: 1, name: 'Lookup Anything' }));
+});
+
+test('manifest whitespace moves the referenced Name without changing semantic revision basis', () => {
+  assert.deepEqual(SOURCE_IMPORT.revisionPolicy.revisionBasis,
+    [{ id: 'smapi.manifest-context-basis', schemaVersion: 1, behaviorVersion: 1 }]);
+  const beforeSource = captured('{"a":"x"}');
+  const spacedSource = captured('{"a":"x"}', baseManifest.replace('"Name"', '  "Name"'));
+  const renamedSource = captured('{"a":"x"}', baseManifest.replace('"Name":"Test"', '"Name":"Changed"'));
+  const before = extractSource(beforeSource); const spaced = extractSource(spacedSource); const renamed = extractSource(renamedSource);
+  const basis = exchange => exchange.domainBlocks.find(block => block.schema.id === 'smapi.manifest-context-basis').payloadUtf8;
+  const fact = exchange => JSON.parse(exchange.domainBlocks.find(block => block.schema.id === 'tsumugi.source-context-facts').payloadUtf8).facts[0];
+  assert.equal(basis(before), basis(spaced));
+  assert.notEqual(fact(before).origin.sources[0].range.start, fact(spaced).origin.sources[0].range.start);
+  assert.notEqual(basis(before), basis(renamed));
+  const reordered = clone(before); reordered.domainBlocks.reverse();
+  assert.deepEqual(errors(checkSourceSemantics(sourceCheck(beforeSource, reordered))), []);
+  for (const [source, exchange] of [[beforeSource, before], [spacedSource, spaced], [renamedSource, renamed]]) {
+    const observed = fact(exchange); const range = observed.origin.sources[0].range;
+    assert.equal(JSON.parse(Buffer.from(source.artifacts[0].utf8).subarray(range.start, range.end).toString()), observed.text);
+    assert.deepEqual(errors(checkSourceSemantics(sourceCheck(source, exchange))), []);
+  }
 });
 
 test('quoted original UTF-8 ranges include BOM, escaped keys, astral and combining text', () => {
@@ -63,7 +94,7 @@ test('quoted original UTF-8 ranges include BOM, escaped keys, astral and combini
   assert.equal(bytes.subarray(occurrence.source.range.start, occurrence.source.range.end).toString(), '"Hi {{name}} 👩🏽‍💻 é"');
   assert.notEqual(exchange.units[1].id, exchange.units[2].id);
   assert.deepEqual(exchange.relations, []);
-  assert.deepEqual(exchange.domainBlocks, []);
+  assert.deepEqual(JSON.parse(exchange.domainBlocks[0].payloadUtf8).facts.map(fact => fact.kind), ['note']);
 });
 
 test('JSONC recovery, duplicate keys, invalid scalars and unsupported flat structures block', () => {
@@ -82,6 +113,20 @@ test('manifest has exactly one valid entry kind and complete duplicate checking'
   const validPack = '{"UniqueID":"Example.Pack","Name":"Pack","Version":"1","ContentPackFor":{"UniqueID":"Parent"}}';
   assert.equal(extractSource(captured('{"a":"x"}', validPack)).units[0].occurrences[0].nativeIdentity.namespace, 'Example.Pack');
   for (const manifest of ['{}', baseManifest.replace('"1.0.0"', '""'), baseManifest.replace('"Example.Mod"', '"中文"'), baseManifest.replace('"EntryDll":"Test.dll"', '"ContentPackFor":{}'), baseManifest.replace('}', ',"ContentPackFor":{"UniqueID":"Parent"}}'), baseManifest.replace('}', ',"extra":{"A":1,"a":2}}')]) fails(() => extractSource(captured('{"a":"x"}', manifest)));
+});
+
+test('oversized manifest names preserve the source while context remains unavailable', () => {
+  const fitting = baseManifest.replace('"Name":"Test"', `"Name":"${'é'.repeat(2048)}"`);
+  assert.equal(extractSource(captured('{"a":"x"}', fitting)).domainBlocks.length, 2);
+  const manifest = baseManifest.replace('"Name":"Test"', `"Name":"${'N'.repeat(4097)}"`);
+  const source = captured('{"a":"x"}', manifest);
+  const proposal = extractSource(source);
+  assert.deepEqual(proposal.domainBlocks, []);
+  assert.deepEqual(errors(checkSourceSemantics(sourceCheck(source, proposal))), []);
+  const forged = clone(proposal);
+  forged.domainBlocks.push(extractSource(captured('{"a":"x"}')).domainBlocks[0]);
+  assert.deepEqual(errors(checkSourceSemantics(sourceCheck(source, forged))),
+    [{ code: 'source-mismatch', target: 'synthetic-set', severity: 'error' }]);
 });
 
 test('exact byte, text, key, count and nesting limits accept N and reject N+1', () => {
@@ -114,6 +159,15 @@ test('separate source checker accepts reordered units but blocks forged semantic
     value => { value.order[0] = value.order[1]; },
     value => { value.artifacts.pop(); },
     value => { value.domainBlocks.push({ id: 'forged' }); },
+    value => { value.domainBlocks.pop(); },
+    value => { value.domainBlocks[0].payloadUtf8 = value.domainBlocks[0].payloadUtf8.replace('Test', 'False'); },
+    value => { value.domainBlocks[0].payloadUtf8 = value.domainBlocks[0].payloadUtf8.replace('extracted', 'inferred'); },
+    value => { value.domainBlocks[1].payloadUtf8 = value.domainBlocks[1].payloadUtf8.replace('Test', 'False'); },
+    value => { value.domainBlocks[1].handling = 'optional'; },
+    value => { value.domainBlocks[0].handling = 'optional'; },
+    value => { const context = JSON.parse(value.domainBlocks[0].payloadUtf8); context.facts.push({
+      id: 'role', kind: 'role', text: 'Narrator', origin: context.facts[0].origin });
+      value.domainBlocks[0].payloadUtf8 = JSON.stringify(context); },
     value => { value.units[0].protectedFragments.push({ id: 'forged' }); },
   ];
   for (const mutate of mutations) {

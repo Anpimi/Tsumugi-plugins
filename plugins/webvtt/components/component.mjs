@@ -3,7 +3,7 @@ import validateBuildInput from '../sdk/validate-build-input.mjs';
 import validateArtifactCheckInput from '../sdk/validate-artifact-check-input.mjs';
 import validateSourceExtractionInput from '../sdk/validate-source-extraction-input.mjs';
 import validateSourceExtractionCheckInput from '../sdk/validate-source-extraction-check-input.mjs';
-import { WebvttError, MAX_PAYLOAD_BYTES, MAX_SOURCE_CHECK_BYTES, extractSource, checkSourceSemantics, buildCaptions, checkArtifact, checkReview, encoded } from './webvtt.mjs';
+import { WebvttError, MAX_PAYLOAD_BYTES, MAX_CONTENT_BYTES, MAX_SOURCE_CHECK_BYTES, extractSource, checkSourceSemantics, buildCaptions, checkArtifact, checkReview, encoded } from './webvtt.mjs';
 
 /** @typedef {import('../../../.cache/sdk/tsumugi-plugin-sdk-0.1.0-alpha.1/javascript/component.js').ComponentModule} ComponentModule */
 /** @typedef {import('../../../.cache/sdk/tsumugi-plugin-sdk-0.1.0-alpha.1/javascript/content.js').SourceExtractionError} SourceExtractionError */
@@ -55,7 +55,7 @@ const component = {
         }
         const output = operation.handler(input, metadata.signal);
         if (metadata.signal.aborted || api.signal.aborted) throw new WebvttError('cancelled', 'Operation cancelled.');
-        return { kind: 'succeeded', utf8: encoded(output) };
+        return { kind: 'succeeded', utf8: encoded(output, id === 'extract-source' ? MAX_CONTENT_BYTES : MAX_PAYLOAD_BYTES) };
       } catch (error) {
         if (!(error instanceof WebvttError)) throw error;
         if (id === 'review-check') {

@@ -4,6 +4,7 @@
     "manifest.json",
     "components/component.mjs",
     "components/smapi.mjs",
+    "schemas/manifest-context-basis.schema.json",
     "profiles/source-import.json",
     "profiles/build.json",
     "profiles/translation-import.json",
@@ -26,6 +27,18 @@
     "profiles/review.json"
   ],
   "sdkFiles": [
+    {
+      "source": "javascript/source-context.mjs",
+      "target": "sdk/source-context.mjs"
+    },
+    {
+      "source": "javascript/source-context-profile.mjs",
+      "target": "sdk/source-context-profile.mjs"
+    },
+    {
+      "source": "javascript/validate-source-context-facts.mjs",
+      "target": "sdk/validate-source-context-facts.mjs"
+    },
     {
       "source": "javascript/validate-source-extraction-input.mjs",
       "target": "sdk/validate-source-extraction-input.mjs"

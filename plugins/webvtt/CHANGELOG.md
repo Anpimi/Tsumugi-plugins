@@ -7,6 +7,12 @@ This project follows Semantic Versioning. The first package is experimental.
 
 ### Added
 
+- Each cue now carries an extracted source-context time fact with its original
+  UTF-8 range. The independent source checker rejects missing or forged facts;
+  speaker, role and scene remain absent in the plain-text caption profile.
+  Revision identity continues to use the semantic cue basis, so changing a
+  NOTE, line ending or cue position alone does not expire unchanged cues.
+
 - Source recipes now use schema/behavior 2/2 and require their exact immutable `review-profile` Resource. Consumers must use the newly pinned SDK; earlier experimental recipes are refused without conversion. Source and Review data contracts and the unreleased package version remain unchanged.
 
 - A mandatory review Resource and selected-text QA capability now check fixed source evidence and exact rule versions through SDK CheckResults. Missing text uses only explicitly permitted N/A evidence; source checks continue. Core approval, terminology, fallback, waivers and release eligibility remain separate application responsibilities.

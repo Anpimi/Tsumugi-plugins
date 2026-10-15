@@ -2,9 +2,10 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
 import test from 'node:test';
-import { checkSourceSemantics, extractSource, WebvttError, MAX_PAYLOAD_BYTES, MAX_SOURCE_CHECK_BYTES } from '../components/webvtt.mjs';
+import { checkSourceSemantics, extractSource, WebvttError, MAX_PAYLOAD_BYTES, MAX_CONTENT_BYTES, MAX_SOURCE_CHECK_BYTES } from '../components/webvtt.mjs';
 
 const ORACLE = JSON.parse(await readFile(new URL('fixtures/source-check.json', import.meta.url), 'utf8'));
+const SOURCE_IMPORT = JSON.parse(await readFile(new URL('../profiles/source-import.json', import.meta.url), 'utf8'));
 const fresh = () => structuredClone(ORACLE);
 const outcome = request => checkSourceSemantics(request)[0].outcome;
 const failure = callback => assert.throws(callback, error => error instanceof WebvttError && error.code === 'invalid-input');
@@ -27,10 +28,34 @@ test('two thousand cues and a full source fit the separate combined checker budg
   const bytes = value => Buffer.byteLength(JSON.stringify(value));
   assert.equal(Buffer.byteLength(utf8), 128 * 1024);
   assert.equal(request.proposal.units.length, 2000);
+  assert.equal(request.proposal.domainBlocks.length, 4000);
   assert.ok(bytes(request.source) <= MAX_PAYLOAD_BYTES);
-  assert.ok(bytes(request.proposal) <= MAX_PAYLOAD_BYTES);
-  assert.ok(bytes(request) > MAX_PAYLOAD_BYTES);
+  assert.ok(bytes(request.proposal) <= MAX_CONTENT_BYTES);
+  assert.ok(bytes(request.proposal) > 2 * 1024 * 1024);
   assert.ok(bytes(request) <= MAX_SOURCE_CHECK_BYTES);
+  assert.deepEqual(outcome(request), { kind: 'completed', findings: [] });
+});
+
+test('full source with long escaped cue IDs retains all context within declared budgets', () => {
+  const request = fresh();
+  const base = Array.from({ length: 2000 }, (_, index) => `C${index}\n00:00.000 --> 00:01.000\na\n\n`);
+  const prefix = 'WEBVTT\n\n';
+  let spare = 128 * 1024 - Buffer.byteLength(prefix + base.join(''));
+  const utf8 = prefix + base.map((cue, index) => {
+    const extra = Math.min(1024 - Buffer.byteLength(`C${index}`), spare);
+    spare -= extra;
+    return cue.replace('\n', '\\'.repeat(extra) + '\n');
+  }).join('');
+  const artifact = request.source.artifacts[0];
+  artifact.utf8 = utf8;
+  artifact.sha256 = createHash('sha256').update(utf8).digest('hex');
+  request.proposal = extractSource(request.source);
+  assert.equal(Buffer.byteLength(utf8), 128 * 1024);
+  assert.equal(Buffer.byteLength(utf8.split('\n')[2]), 1024);
+  assert.equal(spare, 0);
+  assert.equal(request.proposal.domainBlocks.length, 4000);
+  assert.ok(Buffer.byteLength(JSON.stringify(request.proposal)) <= MAX_CONTENT_BYTES);
+  assert.ok(Buffer.byteLength(JSON.stringify(request)) <= MAX_SOURCE_CHECK_BYTES);
   assert.deepEqual(outcome(request), { kind: 'completed', findings: [] });
 });
 
@@ -52,6 +77,41 @@ test('literal source oracle checks complete UTF-8 coverage and original native d
   }
   assert.equal(request.proposal.units[0].occurrences[0].nativeIdentity.value, 'keep');
   assert.equal(request.proposal.units[0].occurrences[0].nativeIdentity.display.value, 'Keep');
+  for (const [index, block] of request.proposal.domainBlocks.slice(2).entries()) {
+    const fact = JSON.parse(block.payloadUtf8).facts[0];
+    assert.equal(fact.kind, 'time');
+    assert.equal(fact.origin.kind, 'extracted');
+    const range = fact.origin.sources[0].range;
+    assert.equal(bytes.subarray(range.start, range.end).toString(), fact.text);
+    assert.equal(block.target.id, request.proposal.order[index]);
+  }
+});
+
+test('note, newline and cue positions change references without changing semantic revision basis', () => {
+  assert.deepEqual(SOURCE_IMPORT.revisionPolicy.revisionBasis,
+    [{ id: 'webvtt.cue-basis', schemaVersion: 1, behaviorVersion: 1 }]);
+  const original = fresh().source;
+  const changed = structuredClone(original);
+  changed.artifacts[0].utf8 = original.artifacts[0].utf8
+    .replace('\r\n\r\n', '\r\n\r\nNOTE inserted\r\n\r\n').replaceAll('\r\n', '\n');
+  changed.artifacts[0].sha256 = createHash('sha256').update(changed.artifacts[0].utf8).digest('hex');
+  const before = extractSource(original); const after = extractSource(changed);
+  const basis = exchange => exchange.domainBlocks.filter(block => block.schema.id === 'webvtt.cue-basis').map(block => block.payloadUtf8);
+  const facts = exchange => exchange.domainBlocks.filter(block => block.schema.id === 'tsumugi.source-context-facts');
+  assert.deepEqual(basis(before), basis(after));
+  assert.notDeepEqual(facts(before).map(block => block.payloadUtf8), facts(after).map(block => block.payloadUtf8));
+  for (const [source, exchange] of [[original, before], [changed, after]]) {
+    const bytes = Buffer.from(source.artifacts[0].utf8);
+    for (const block of facts(exchange)) {
+      const fact = JSON.parse(block.payloadUtf8).facts[0];
+      const range = fact.origin.sources[0].range;
+      assert.equal(bytes.subarray(range.start, range.end).toString(), fact.text);
+    }
+  }
+  const timed = structuredClone(changed);
+  timed.artifacts[0].utf8 = timed.artifacts[0].utf8.replace('00:01.000 --> 00:02.000', '00:01.000 --> 00:03.000');
+  timed.artifacts[0].sha256 = createHash('sha256').update(timed.artifacts[0].utf8).digest('hex');
+  assert.notDeepEqual(basis(after), basis(extractSource(timed)));
 });
 
 test('source verifier accepts arbitrary local references and unordered unit/block collections', () => {
@@ -61,7 +121,9 @@ test('source verifier accepts arbitrary local references and unordered unit/bloc
     unit.sourceRevisionId = `local-revision-${index}`;
     unit.occurrences[0].id = `local-occurrence-${index}`;
     request.proposal.order[index] = `local-occurrence-${index}`;
-    request.proposal.domainBlocks[index].target.id = `local-occurrence-${index}`;
+  });
+  request.proposal.domainBlocks.forEach((block, index) => {
+    block.target.id = `local-occurrence-${index % request.proposal.order.length}`;
   });
   request.proposal.units.reverse();
   request.proposal.domainBlocks.reverse();
@@ -105,6 +167,15 @@ test('semantically forged proposals complete coverage with a blocking source mis
     ['rewritten opaque bytes', p => { p.domainBlocks[0].payloadUtf8 = JSON.stringify(JSON.parse(p.domainBlocks[0].payloadUtf8), null, 2); }],
     ['duplicate opaque key', p => { p.domainBlocks[0].payloadUtf8 = p.domainBlocks[0].payloadUtf8.replace('{', '{"version":0,'); }],
     ['unknown opaque field', p => { p.domainBlocks[0].payloadUtf8 = p.domainBlocks[0].payloadUtf8.replace('{', '{"extra":true,'); }],
+    ['missing time fact', p => { p.domainBlocks.pop(); }],
+    ['forged time', p => { p.domainBlocks[2].payloadUtf8 = p.domainBlocks[2].payloadUtf8.replace('00:00.000', '00:03.000'); }],
+    ['inferred origin', p => { p.domainBlocks[2].payloadUtf8 = p.domainBlocks[2].payloadUtf8.replace('extracted', 'inferred'); }],
+    ['forged time range', p => { p.domainBlocks[2].payloadUtf8 = p.domainBlocks[2].payloadUtf8.replace('"start":19', '"start":20'); }],
+    ['extra context', p => { p.domainBlocks.push(structuredClone(p.domainBlocks[2])); }],
+    ['optional context', p => { p.domainBlocks[2].handling = 'optional'; }],
+    ['invented speaker', p => { const context = JSON.parse(p.domainBlocks[2].payloadUtf8); context.facts.push({
+      id: 'speaker', kind: 'speaker', text: 'Unknown', origin: context.facts[0].origin });
+      p.domainBlocks[2].payloadUtf8 = JSON.stringify(context); }],
     ['unexpected relation', p => { p.relations.push({ kind: { id: 'other', schemaVersion: 1, behaviorVersion: 1 }, fromOccurrence: 'occurrence-0', toOccurrence: 'occurrence-1' }); }],
     ['unexpected protected fragment', p => { p.units[0].protectedFragments.push({ kind: { id: 'other', schemaVersion: 1, behaviorVersion: 1 }, range: { encoding: 'utf8-byte', start: 0, end: 1 } }); }],
   ];
@@ -157,6 +228,6 @@ test('source checking preserves independently captured bases and observes cancel
   assert.equal(result.key.implementation.provider.packageDigest, '6'.repeat(64));
   const controller = new AbortController(); controller.abort();
   assert.throws(() => checkSourceSemantics(request, controller.signal), error => error instanceof WebvttError && error.code === 'cancelled');
-  request.proposal.units[0].text = 'x'.repeat(MAX_PAYLOAD_BYTES);
+  request.proposal.units[0].text = 'x'.repeat(MAX_CONTENT_BYTES);
   assert.throws(() => checkSourceSemantics(request), error => error instanceof WebvttError && error.code === 'limit-exceeded');
 });

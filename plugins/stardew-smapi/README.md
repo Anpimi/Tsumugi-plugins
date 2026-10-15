@@ -38,6 +38,23 @@ refused. The complete manifest is retained, not executed. Printable ASCII native
 keys and UniqueID retain the preceding limits; Unicode values and empty values
 are preserved. `$schema` is retained in raw source, without becoming a text unit.
 At most 2000 entries and 16 KiB per decoded text are admitted.
+Extraction adds one snapshot-level source context `note` containing the actual
+manifest `Name`, referenced by its original quoted UTF-8 byte range. The separate
+source checker reparses the manifest and rejects omitted, forged or additional
+facts. Keys and namespace supply native identity only; they do not imply a
+speaker, role, scene or character. The fact is encoded with the pinned SDK helper,
+staged for source-tree tests by `prepare-sdk.py` and packaged from that artifact.
+One separate snapshot `smapi.manifest-context-basis/1` block records the decoded
+Name without a source coordinate. It is the only selected context revision basis;
+the fact retains the precise source reference for inspection and checking.
+Manifest whitespace can move the fact's range without invalidating revisions;
+a changed Name changes the semantic basis. The canonical basis payload is
+`{"version":1,"name":"..."}` as described by the packaged
+[schema](schemas/manifest-context-basis.schema.json).
+If `Name` exceeds the SDK fact's 4096-byte text limit, extraction still retains
+the complete source and omits both context blocks. Omission means unavailable
+context, not an empty observation; the checker rejects a partial or invented
+replacement fact or revision basis.
 
 Every native key remains an independent unit, with actual quoted token ranges in
 original UTF-8 bytes and `smapi-native-key/1` identity evidence. No sharing or

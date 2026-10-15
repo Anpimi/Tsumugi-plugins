@@ -25,7 +25,13 @@
       "schemaVersion": 1,
       "behaviorVersion": 1
     },
-    "revisionBasis": []
+    "revisionBasis": [
+      {
+        "id": "smapi.manifest-context-basis",
+        "schemaVersion": 1,
+        "behaviorVersion": 1
+      }
+    ]
   },
   "semanticRules": [
     {

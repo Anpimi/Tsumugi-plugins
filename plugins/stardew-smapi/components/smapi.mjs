@@ -2,6 +2,8 @@
 // See PROVENANCE.md. Project state, identity allocation and adoption stay outside.
 import jsonc from '../.generated/jsonc-parser/lib/umd/main.js';
 import { createHash } from 'node:crypto';
+import { encodeSourceContextFacts } from '../sdk/source-context.mjs';
+import { SOURCE_CONTEXT_FACTS_PROFILE } from '../sdk/source-context-profile.mjs';
 
 export const PROFILE = Object.freeze({ id: 'smapi-i18n-flat', schemaVersion: 1, behaviorVersion: 1 });
 export const MAX_SOURCE_BYTES = 128 * 1024;
@@ -97,7 +99,7 @@ function manifest(raw, signal) {
   const node = parsed.tree;
   if (node.type !== 'object') reject('invalid-source', 'The manifest must be an object.');
   const namespace = requiredString(node, 'UniqueID');
-  requiredString(node, 'Name');
+  const name = requiredString(node, 'Name');
   const version = requiredString(node, 'Version');
   if (!ascii(namespace, 256)) reject('unsupported-structure', 'Manifest UniqueID must be printable ASCII.');
   const dll = property(node, 'EntryDll');
@@ -106,7 +108,7 @@ function manifest(raw, signal) {
   const entry = dll?.type === 'string' && dll.value.length > 0;
   const contentPack = packId?.type === 'string' && packId.value.length > 0;
   if (entry === contentPack) reject('invalid-source', 'Expected exactly one EntryDll or ContentPackFor.UniqueID.');
-  return { namespace, version, sourceTemplate: version.includes('%') };
+  return { namespace, version, sourceTemplate: version.includes('%'), name, nameRange: parsed.range(property(node, 'Name')) };
 }
 
 /** Parse source or existing translations with the same complete flat profile.
@@ -159,8 +161,24 @@ export function extractSource(input, signal) {
           display: { value: entry.key, source: { artifactId: captured.source.id, range: entry.keyRange } } } }], protectedFragments: [] });
     result.order.push(occurrenceId);
   }
+  if (contextAvailable(captured.metadata)) {
+    result.domainBlocks.push({ target: { kind: 'snapshot' }, schema: SOURCE_CONTEXT_FACTS_PROFILE.contract,
+      handling: 'required', payloadUtf8: manifestContext(captured.companion.id, captured.metadata) });
+    result.domainBlocks.push({ target: { kind: 'snapshot' }, schema: contract('smapi.manifest-context-basis'),
+      handling: 'required', payloadUtf8: manifestBasis(captured.metadata) });
+  }
   encoded(result);
   return result;
+}
+
+const contextAvailable = metadata => Buffer.byteLength(metadata.name) <= SOURCE_CONTEXT_FACTS_PROFILE.maxTextBytes;
+function manifestContext(artifactId, metadata) {
+  return encodeSourceContextFacts({ facts: [{ id: 'manifest-name', kind: 'note', text: metadata.name,
+    origin: { kind: 'extracted', sources: [{ artifactId, range: metadata.nameRange }] } }] });
+}
+function manifestBasis(metadata) {
+  // Project revisions depend on the decoded manifest name, never its byte offset.
+  return JSON.stringify({ version: 1, name: metadata.name });
 }
 
 function sameRange(actual, expected, artifactId) {
@@ -170,7 +188,17 @@ function sameRange(actual, expected, artifactId) {
 function faithfulProposal(proposal, source, captured, signal) {
   if (!exact(proposal.profile, PROFILE.id) || proposal.sourceSetId !== source.sourceSetId || proposal.sourceLanguage !== source.sourceLanguage
     || proposal.artifacts.length !== 2 || proposal.units.length !== captured.entries.length || proposal.order.length !== captured.entries.length
-    || proposal.relations.length || proposal.domainBlocks.length) return false;
+    || proposal.relations.length || proposal.domainBlocks.length !== 2 * Number(contextAvailable(captured.metadata))) return false;
+  if (contextAvailable(captured.metadata)) {
+    const blocks = new Map();
+    for (const block of proposal.domainBlocks) {
+      if (block.target?.kind !== 'snapshot' || block.handling !== 'required'
+        || !exact(block.schema, block.schema?.id) || blocks.has(block.schema.id)) return false;
+      blocks.set(block.schema.id, block.payloadUtf8);
+    }
+    if (blocks.get(SOURCE_CONTEXT_FACTS_PROFILE.contract.id) !== manifestContext(captured.companion.id, captured.metadata)
+      || blocks.get('smapi.manifest-context-basis') !== manifestBasis(captured.metadata)) return false;
+  }
   const byArtifact = new Map(proposal.artifacts.map(artifact => [artifact.id, artifact]));
   if (byArtifact.size !== 2 || source.artifacts.some(artifact => {
     const actual = byArtifact.get(artifact.id);

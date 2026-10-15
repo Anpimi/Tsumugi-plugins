@@ -58,6 +58,19 @@ basis payload uses exact `JSON.stringify` bytes, with properties ordered as
 checker rejects rewritten formatting, duplicate/unknown properties and additional
 opaque blocks; it never silently parses them into a different accepted payload.
 
+Each occurrence also has a required `tsumugi.source-context-facts/1` block with
+one extracted `time` fact. Its text is the original start/arrow/end spelling,
+including spacing, and its UTF-8 byte range points to that exact substring of
+the captured timing line. Cue settings remain in the separate cue basis and
+original artifact. Plain-text profile 1 rejects cue markup and voice tags, so
+it cannot assert a speaker, role or scene. The source-import revision policy
+selects only `webvtt.cue-basis/1` as source revision basis. That basis already
+contains timing, settings, original ID and semantic layout. The fact's original
+byte range is checked but does not enter the revision digest, so adding a NOTE,
+changing line endings or moving a cue without changing its meaning does not
+expire every source revision. The SDK owns the context fact shape and bounds;
+this package supplies only the caption interpretation.
+
 ## Fixed source semantic checking
 
 The SDK-owned check input contains the independently captured `source`, the
@@ -77,9 +90,12 @@ full occurrence order, normalized source text, original payload ranges, canonica
 identity/policy, literal display and original ID ranges. It accepts different valid
 operation-local reference names and unit/block collection order when all references
 remain complete. Unit, revision and occurrence references must each be unique.
-Every occurrence must have exactly its required basis block at the correct target
-with its exact schema, handling and original canonical payload. Additional
-relations, protected fragments or opaque blocks are unsupported in this profile.
+Every occurrence must have exactly its required basis and context blocks at the
+correct target with exact schema, handling and original canonical payload.
+The checker reconstructs the time fact and byte reference by reparsing captured
+source; it never treats the producer's fact as its own oracle. Missing, extra,
+altered or inferred facts are blocking mismatches. Additional relations,
+protected fragments or opaque blocks are unsupported in this profile.
 
 The result is the SDK standard `CheckResult[]`, containing exactly one result.
 `key`, `inputDigest`, `scopeDigest` and `coveredTargets` preserve the captured
@@ -96,8 +112,9 @@ The component cannot authenticate a supplied package digest. The application mus
 obtain requirements independently, and the Host must match the result to the
 actual selected package, contribution, instance and channel. Requirement data and
 a plugin's completed claim grant no permission or project authority. The combined
-source/proposal payload each remains bounded by 2 MiB; their combined source-check
-input is bounded by 4 MiB. A near-limit
+captured source remains bounded by 2 MiB and the complete proposal by the
+4 MiB content-exchange limit; their combined source-check input is bounded by
+4 MiB. A near-limit
 extraction result may not fit when combined with source. Oversized checks are
 explicitly refused without truncation or partial coverage.
 
@@ -163,7 +180,8 @@ implementation errors terminate the component channel.
 
 Source/output remain limited to 128 KiB, 2000 cues and 16 KiB per source/target
 payload in actual UTF-8 bytes, including the chosen newline encoding. Captured
-source/content, ArtifactSet and CheckResults each retain their 2 MiB encoded
-ceiling. BuildInput and combined source/artifact-check requests admit 4 MiB,
+source material, ArtifactSet and CheckResults retain their 2 MiB encoded ceiling;
+the context-bearing content exchange has a separate 4 MiB ceiling. BuildInput
+and combined source/artifact-check requests admit 4 MiB,
 subject to the Host's fixed invocation budget. Oversized operations are refused
 without truncation, partial coverage or fallback to an older protocol.

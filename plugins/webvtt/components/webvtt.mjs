@@ -1,6 +1,8 @@
 // Domain implementation derived from Tsumugi's MIT-licensed caption profile.
 // See PROVENANCE.md for the exact public source revision and migration boundary.
 import { createHash } from 'node:crypto';
+import { encodeSourceContextFacts } from '../sdk/source-context.mjs';
+import { SOURCE_CONTEXT_FACTS_PROFILE } from '../sdk/source-context-profile.mjs';
 
 /** @typedef {import('../../../.cache/sdk/tsumugi-plugin-sdk-0.1.0-alpha.1/javascript/content.js').SourceExtractionInput} SourceExtractionInput */
 /** @typedef {import('../../../.cache/sdk/tsumugi-plugin-sdk-0.1.0-alpha.1/javascript/content.js').ContentExchange} ContentExchange */
@@ -10,6 +12,7 @@ export const MAX_SOURCE_BYTES = 128 * 1024;
 export const MAX_CUES = 2000;
 export const MAX_TEXT_BYTES = 16 * 1024;
 export const MAX_PAYLOAD_BYTES = 2 * 1024 * 1024;
+export const MAX_CONTENT_BYTES = 4 * 1024 * 1024;
 export const MAX_SOURCE_CHECK_BYTES = 4 * 1024 * 1024;
 export const PROFILE = Object.freeze({ id: 'webvtt-captions', schemaVersion: 1, behaviorVersion: 1 });
 export const BUILD_LIMITS = Object.freeze({ maxArtifacts: 1, maxTotalBytes: MAX_SOURCE_BYTES });
@@ -208,7 +211,12 @@ export function parseCaptions(raw, signal) {
     const payload = bytes.subarray(start, end).toString('utf8');
     if (!validPayload(payload)) reject('unsupported-structure', 'Unsupported or empty caption payload.');
     if (cues.length >= MAX_CUES) reject('limit-exceeded', 'Caption source exceeds 2000 cues.');
+    // The source reference covers the literal time interval, excluding cue
+    // settings. The complete timing line remains in the opaque identity basis.
+    const time = /^[\t\f\r ]*(\S+[\t\f\r ]+-->[\t\f\r ]+\S+)/.exec(block[1].text);
+    const timeStart = block[1].start + Buffer.byteLength(block[1].text.slice(0, time.index + time[0].length - time[1].length));
     cues.push({ ordinal: cues.length, nativeId, canonicalId, idStart: block[0].start, idEnd: block[0].end,
+      timeLiteral: time[1], timeStart, timeEnd: timeStart + Buffer.byteLength(time[1]),
       start, end, sourceText: normalize(payload),
       basis: { version: 1, policy: POLICY, nativeId, timing: block[1].text, settings: parsed.settings, layoutDigest } });
   }
@@ -247,8 +255,18 @@ export function extractSource(input, signal) {
     result.domainBlocks.push({ target: { kind: 'occurrence', id: occurrence }, schema: contract('webvtt.cue-basis'),
       handling: 'required', payloadUtf8: JSON.stringify(cue.basis) });
   }
-  encoded(result);
+  for (const cue of parsed.cues) {
+    result.domainBlocks.push({ target: { kind: 'occurrence', id: result.order[cue.ordinal] }, schema: SOURCE_CONTEXT_FACTS_PROFILE.contract,
+      handling: 'required', payloadUtf8: cueContext(artifact.id, cue) });
+  }
+  encoded(result, MAX_CONTENT_BYTES);
   return result;
+}
+
+function cueContext(artifactId, cue) {
+  return encodeSourceContextFacts({ facts: [{ id: 'time', kind: 'time', text: cue.timeLiteral,
+    origin: { kind: 'extracted', sources: [{ artifactId,
+      range: { encoding: 'utf8-byte', start: cue.timeStart, end: cue.timeEnd } }] } }] });
 }
 
 function exactContract(actual, id) {
@@ -290,7 +308,7 @@ function sourceAssociation(input, artifact) {
 function faithfulSourceProposal(input, artifact, parsed, signal) {
   const proposal = input.proposal;
   if (proposal.units.length !== parsed.cues.length || proposal.order.length !== parsed.cues.length
-    || proposal.relations.length !== 0 || proposal.domainBlocks.length !== parsed.cues.length) return false;
+    || proposal.relations.length !== 0 || proposal.domainBlocks.length !== parsed.cues.length * 2) return false;
   const unitIds = new Set();
   const revisionIds = new Set();
   const occurrences = new Map();
@@ -307,9 +325,14 @@ function faithfulSourceProposal(input, artifact, parsed, signal) {
   const blocks = new Map();
   for (const block of proposal.domainBlocks) {
     cancelled(signal);
-    if (block.target.kind !== 'occurrence' || !occurrences.has(block.target.id) || blocks.has(block.target.id)
-      || !exactContract(block.schema, 'webvtt.cue-basis') || block.handling !== 'required') return false;
-    blocks.set(block.target.id, block.payloadUtf8);
+    if (block.target.kind !== 'occurrence' || !occurrences.has(block.target.id) || block.handling !== 'required') return false;
+    const kind = block.schema?.id;
+    if ((kind !== 'webvtt.cue-basis' && kind !== SOURCE_CONTEXT_FACTS_PROFILE.contract.id)
+      || !exactContract(block.schema, kind)) return false;
+    const entry = blocks.get(block.target.id) ?? new Map();
+    if (entry.has(kind)) return false;
+    entry.set(kind, block.payloadUtf8);
+    blocks.set(block.target.id, entry);
   }
   const ordered = new Set();
   for (const [index, cue] of parsed.cues.entries()) {
@@ -326,7 +349,8 @@ function faithfulSourceProposal(input, artifact, parsed, signal) {
       || !exactRange(identity.display.source, artifact.id, cue.idStart, cue.idEnd)
       // Opaque basis bytes have one canonical encoding in this profile. Do not
       // JSON.parse a forged duplicate field and silently discard its history.
-      || blocks.get(id) !== JSON.stringify(cue.basis)) return false;
+      || blocks.get(id)?.get('webvtt.cue-basis') !== JSON.stringify(cue.basis)
+      || blocks.get(id)?.get(SOURCE_CONTEXT_FACTS_PROFILE.contract.id) !== cueContext(artifact.id, cue)) return false;
   }
   return true;
 }
@@ -338,7 +362,7 @@ export function checkSourceSemantics(input, signal) {
     cancelled(signal);
     encoded(input, MAX_SOURCE_CHECK_BYTES);
     encoded(input.source);
-    encoded(input.proposal);
+    encoded(input.proposal, MAX_CONTENT_BYTES);
   const requirement = sourceRequirement(input);
   const { artifact, parsed } = capturedSource(input.source, signal);
   sourceAssociation(input, artifact);
@@ -360,7 +384,7 @@ export const REVIEW_RULES = Object.freeze([
 /** Captured domain QA only; project decisions, resources, fallback and release
  * qualification stay application-owned. No builder is invoked as an oracle. */
 export function checkReview(input, signal) {
-  cancelled(signal); encoded(input, MAX_SOURCE_CHECK_BYTES); encoded(input.source);
+  cancelled(signal); encoded(input, MAX_SOURCE_CHECK_BYTES); encoded(input.source, MAX_CONTENT_BYTES);
   record(input, ['source', 'targetLanguage', 'selections', 'requirements']);
   if (!language(input.targetLanguage) || !Array.isArray(input.selections) || !input.selections.length
     || input.selections.length > MAX_CUES || !Array.isArray(input.requirements)
@@ -435,7 +459,7 @@ function prepareBuild(input, signal) {
   record(input.source, ['profile', 'sourceSetId', 'sourceLanguage', 'artifacts', 'units', 'order', 'relations', 'domainBlocks']);
   record(input.outputLimits, ['maxArtifacts', 'maxTotalBytes']);
   encoded(input, MAX_SOURCE_CHECK_BYTES);
-  encoded(input.source);
+  encoded(input.source, MAX_CONTENT_BYTES);
   if (!language(input.targetLanguage) || !Array.isArray(input.configuration) || input.configuration.length !== 0
     || input.outputLimits.maxArtifacts !== BUILD_LIMITS.maxArtifacts || input.outputLimits.maxTotalBytes !== BUILD_LIMITS.maxTotalBytes) {
     reject('invalid-input', 'Unsupported build language, configuration or fixed output limits.');

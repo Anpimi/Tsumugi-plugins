@@ -28,3 +28,8 @@ producer selected in `sdk.lock.json`; no Core implementation is imported at runt
 Project language confirmation, current-source matching, per-entry candidate/selection
 adoption and final desktop cutover remain incomplete. Domain output and package
 receipts cannot establish those application workflows.
+The snapshot context note uses only the parsed manifest `Name` and its original
+quoted byte range. SDK-generated encoding and limits are selected through the
+same lock; this package does not infer characters or roles from native keys.
+The separate domain revision basis records decoded Name only; source offsets
+remain in the context fact and do not change project revisions by themselves.

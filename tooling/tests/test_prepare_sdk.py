@@ -23,7 +23,10 @@ class PreparationTests(unittest.TestCase):
         archive = root / "artifacts" / "sdk" / commit / (package + ".crate")
         archive.parent.mkdir(parents=True)
         files = {"Cargo.toml": b'[package]\nname = "tsumugi-plugin-sdk"\n',
-                 "src/lib.rs": b"pub struct CapturedSource;\n"}
+                 "src/lib.rs": b"pub struct CapturedSource;\n",
+                 "javascript/source-context.mjs": b"export const encoder = true;\n",
+                 "javascript/source-context-profile.mjs": b"export const profile = true;\n",
+                 "javascript/validate-source-context-facts.mjs": b"export const shape = true;\n"}
         with tarfile.open(archive, "w:gz") as target:
             for name, data in files.items():
                 member = tarfile.TarInfo(package + "/" + name)
@@ -34,6 +37,8 @@ class PreparationTests(unittest.TestCase):
                 "archive": archive.relative_to(root).as_posix(),
                 "sha256": hashlib.sha256(archive.read_bytes()).hexdigest()}
         (root / "sdk.lock.json").write_text(json.dumps(lock), encoding="utf-8")
+        for package_dir in ("webvtt", "stardew-smapi"):
+            (root / "plugins" / package_dir).mkdir(parents=True)
         return root, archive, lock, files
 
     def test_verified_bytes_are_materialized_and_existing_cache_is_rechecked(self):
@@ -42,6 +47,11 @@ class PreparationTests(unittest.TestCase):
             cache = owner.prepare(root)
             self.assertEqual({p.relative_to(cache).as_posix(): p.read_bytes()
                               for p in cache.rglob("*") if p.is_file()}, files)
+            for package_dir in ("webvtt", "stardew-smapi"):
+                for name in ("source-context.mjs", "source-context-profile.mjs",
+                             "validate-source-context-facts.mjs"):
+                    self.assertEqual((root / "plugins" / package_dir / "sdk" / name).read_bytes(),
+                                     files["javascript/" + name])
             self.assertEqual(owner.prepare(root), cache)
             (cache / "src/lib.rs").write_bytes(b"different contract\n")
             with self.assertRaisesRegex(ValueError, "SDK cache"):
