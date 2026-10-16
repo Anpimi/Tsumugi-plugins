@@ -96,7 +96,7 @@ test('AI tool metadata selects the original capability and does not replace its 
   assert.deepEqual(manifest.contributions.find(c => c.id === 'agent-query-tool').contribution.schema,
     { id: 'tsumugi.capability-tool-declaration', schemaVersion: 1, behaviorVersion: 1 });
   assert.deepEqual(selected.permissions, [{ kind: 'captured-input' }]);
-  assert.deepEqual(manifest.components.map(c => c.dependencies), [[], []]);
+  assert.deepEqual(manifest.components.filter(c => ['knowledge', 'reference'].includes(c.id)).map(c => c.dependencies), [[], []]);
   assert.equal(manifest.contributions.filter(c => c.contribution.kind === 'skill').length, 1);
 });
 
@@ -141,7 +141,7 @@ test('public text-query presentation uses the original SDK component for single,
 
 
 test('each declared Project capability registers its exact current facade ID', () => {
-  for (const selected of packageManifest.contributions.filter(value => value.contribution.kind === 'capability')) {
+  for (const selected of packageManifest.contributions.filter(value => value.componentId === 'knowledge' && value.contribution.kind === 'capability')) {
     const registered = [];
     component.activate({ instance: componentInstance, services: [], signal: new AbortController().signal,
       contributions: [{ id: selected.id, contract: selected.contribution.declaration.contract }], onDispose() {},

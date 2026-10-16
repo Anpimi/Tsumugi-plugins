@@ -4,6 +4,20 @@ The English changelog is authoritative; `CHANGELOG.zh-CN.md` mirrors it.
 
 ## [Unreleased]
 
+### Added
+
+- Add an independent Attempt-scoped `generation` component with the namespaced
+  `generation-delegate` capability and required single WorkPlan generation
+  service. The external capability requests only that ProjectService permission;
+  the package permission union grows while the original knowledge query/check
+  permissions, contracts and scopes remain unchanged. Forward one fixed child
+  identity/source subset and preserve original success, failure or unknown
+  receipt/error bytes using pinned SDK validators, without prompts, model access,
+  retries or completion claims. Receipts acknowledge child enqueueing; later
+  model/credential failures remain child outcomes. This stays in the same
+  undistributed alpha.1 batch and requires separate review of the new bytes and
+  permission, without replacing an installed same-version snapshot automatically.
+
 ### Changed
 
 - Register the exact callable roster through the public `contributions` and

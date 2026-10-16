@@ -4,6 +4,17 @@
 
 ## [Unreleased]
 
+### Added
+
+- 增加独立 Attempt 作用域的 `generation` 组件、带命名空间的
+  `generation-delegate` 能力及 required-single WorkPlan generation 服务依赖。
+  该 External 能力只申请对应 ProjectService 权限；包权限并集增加，原知识
+  query／check 的权限、契约和作用域保持不变。使用固定 SDK validator，单次转交
+  准确 child 身份／源单元子集，保留原成功、失败或 unknown 的 receipt／error
+  字节，不提供 prompt、模型访问、重试或完成声明。Receipt 仅确认 child 入账；
+  后续模型／凭据失败仍属于 child 结果。继续使用同一未分发 alpha.1 批次，新增
+  字节及权限须单独审查，不自动替换已安装的同版本快照。
+
 ### Changed
 
 - 通过公共 `contributions` 与 `register(id, handler)` API 登记准确能力集合；

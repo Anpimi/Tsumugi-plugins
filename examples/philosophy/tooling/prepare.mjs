@@ -1,6 +1,6 @@
 import { constants, openSync, closeSync, fstatSync, lstatSync, readSync, writeFileSync, ftruncateSync, mkdirSync } from 'node:fs';
 import { OPERATIONS, PROFILE, RESOURCE_SCHEMA, contract, digest, MAX_INPUT_BYTES, MAX_OUTPUT_BYTES, createKnowledgeEngine } from '../components/knowledge.mjs';
-import { TEXT_REVIEW_DECLARATION_SCHEMA, textReviewDeclaration } from '../components/definition.mjs';
+import { GENERATION, TEXT_REVIEW_DECLARATION_SCHEMA, textReviewDeclaration } from '../components/definition.mjs';
 import validateTool from '../../../.cache/sdk/tsumugi-plugin-sdk-0.1.0-alpha.1/javascript/validate-tool-declaration.mjs';
 import validateReview from '../../../.cache/sdk/tsumugi-plugin-sdk-0.1.0-alpha.1/javascript/validate-text-review-declaration.mjs';
 
@@ -51,16 +51,22 @@ const review = textReviewDeclaration(resource);
 const manifest = {
   protocolVersion: 1,
   plugin: { publisher: 'org.tsumugi.examples', id: 'philosophy', version },
-  permissions: [{ kind: 'captured-input' }],
+  permissions: [{ kind: 'captured-input' }, { kind: 'project-service', contract: GENERATION.service }],
   components: [
     { id: 'knowledge', scope: 'project', runtime: 'javascript', entrypoint: 'components/component.mjs', dependencies: [], exit: { stopTimeoutMs: 1000, cleanupTimeoutMs: 1000 } },
     { id: 'reference', scope: 'application', runtime: 'data', entrypoint: null, dependencies: [], exit: { stopTimeoutMs: 1000, cleanupTimeoutMs: 1000 } },
+    { id: GENERATION.componentId, scope: 'attempt', runtime: 'javascript', entrypoint: 'components/generation.mjs',
+      dependencies: [{ contract: GENERATION.service, required: true, selection: 'single' }], exit: { stopTimeoutMs: 1000, cleanupTimeoutMs: 1000 } },
   ],
   contributions: [
     ...Object.entries(OPERATIONS).map(([id, operation]) => ({ id, componentId: 'knowledge', contribution: { kind: 'capability', declaration: {
       contract: operation.contract, inputSchema: operation.input, outputSchema: operation.output, errorSchema: operation.error, profiles: [PROFILE],
       effect: 'read-only', permissions: [{ kind: 'captured-input' }], limits: { maxInputBytes: MAX_INPUT_BYTES, maxOutputBytes: MAX_OUTPUT_BYTES, concurrency: 1, timeoutMs: 5000 },
     } } })),
+    { id: GENERATION.contributionId, componentId: GENERATION.componentId, contribution: { kind: 'capability', declaration: {
+      contract: GENERATION.contract, inputSchema: GENERATION.input, outputSchema: GENERATION.output, errorSchema: GENERATION.error,
+      profiles: [], effect: 'external', permissions: [{ kind: 'project-service', contract: GENERATION.service }], limits: GENERATION.limits,
+    } } },
     { id: 'terminology', componentId: 'reference', contribution: { kind: 'resource', schema: RESOURCE_SCHEMA, path: 'resources/terminology.json' } },
     { id: 'text-review', componentId: 'reference', contribution: { kind: 'resource', schema: TEXT_REVIEW_DECLARATION_SCHEMA, path: 'resources/text-review.json' } },
     { id: 'agent-query-tool', componentId: 'reference', contribution: { kind: 'resource', schema: contract('tsumugi.capability-tool-declaration'), path: 'resources/agent-query-tool.json' } },

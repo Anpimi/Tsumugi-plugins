@@ -10,6 +10,18 @@ export const OPERATIONS = Object.freeze({
   check: { contract: { id: 'org.tsumugi.examples.philosophy-check', schemaVersion: 2, behaviorVersion: 2 }, input: contract('tsumugi.text-review-input'), output: contract('tsumugi.text-review-report'), error: REVIEW_ERROR_SCHEMA },
 });
 
+// Generation is a separate effectful component, not another knowledge query.
+export const GENERATION = Object.freeze({
+  componentId: 'generation',
+  contributionId: 'generation-delegate',
+  contract: contract('org.tsumugi.examples.philosophy-generation-delegate'),
+  service: contract('tsumugi.work-plan-generation'),
+  input: contract('tsumugi.work-plan-generation-input'),
+  output: contract('tsumugi.work-plan-generation-receipt'),
+  error: contract('tsumugi.work-plan-generation-error'),
+  limits: { maxInputBytes: 16 * 1024, maxOutputBytes: 1024, concurrency: 1, timeoutMs: 5000 },
+});
+
 export const conceptRule = id => contract(`org.tsumugi.examples.philosophy-term.${id}`);
 export function textReviewDeclaration(resource) {
   return {

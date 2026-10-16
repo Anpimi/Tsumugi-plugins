@@ -3,9 +3,10 @@
 The entrypoint uses the current Process3 SDK facade: `api.instance`, the frozen
 `api.contributions` roster, and `api.register(contributionId, handler)`. It
 registers exactly the members selected by the Host, with no singleton API
-fallback. Callable components retain their declared **Project** scope; adapting
-the entrypoint does not enable an Application instance or authorize additional
-operations. Use the current paired SDK and Host artifacts; older Process2
+fallback. The knowledge callables retain their declared **Project** scope;
+the separate generation delegate has **Attempt** scope. These declarations do
+not enable an Application worker or authorize additional operations. Use the
+current paired SDK and Host artifacts; older Process2
 runtime captures cannot execute this facade.
 
 An independent knowledge package with the identity
@@ -76,6 +77,66 @@ Application editor, batch and Agent tool discovery/invocation are separate
 integration work. This package does not claim that those product journeys or an
 AI execution loop have been accepted merely because metadata is present.
 
+<a id="generation-service-client"></a>
+
+## Optional generation service client
+
+The same package also contains an independent JavaScript `generation` component
+at `components/generation.mjs`. Its `generation-delegate` callable uses
+`org.tsumugi.examples.philosophy-generation-delegate` schema/behavior **1/1**.
+This Attempt-scoped component has one required, single-provider dependency on
+the public `tsumugi.work-plan-generation` **1/1** service. It uses that service's
+original `tsumugi.work-plan-generation-input`,
+`tsumugi.work-plan-generation-receipt` and
+`tsumugi.work-plan-generation-error` schemas, all **1/1**, and declares no
+profile. It does not apply the terminology profile to generated text.
+
+The capability has an `external` effect and requests only the matching
+`project-service` permission. Package approval therefore displays the union of
+the existing captured-input permission and this additional service permission.
+The original `query` and `check` capabilities remain read-only and request only
+captured input; their Project component has no required service. Inert Resources
+and Skills retain their data component. They can still be read, queried or
+checked without activating generation or providing an AI service. Installing or
+enabling the package does not authorize this external effect.
+
+The delegate accepts only the SDK's fixed child `taskId`, `attemptId` and
+nonempty distinct `unitIds` subset, within **16 KiB** and **100 units**. It checks
+the exact captured service descriptor, invocation schema and absent profile,
+then makes one `metadata.services.call(handleId, input.utf8)` with the original
+bytes. It preserves the service's `succeeded`, `failed` or `unknown` outcome and
+original receipt/error bytes, within **1 KiB**. SDK-generated validators come
+from the selected immutable archive; this package adds no protocol codec,
+executor, model adapter or retry path.
+
+The actual application resolves the child identities and source subset against
+the original authorized WorkPlan. The existing generation choice, read,
+prepare and start path selects the installed component and independently
+approved environment, and requires its own ordinary execution consent. The
+application's generation-service factory retains the original project, plan,
+scope, permissions, source, sharing decision, model destination, deadline and
+cumulative budget. The client supplies no source text, philosophical context,
+prompt, model, endpoint, credential, grant or budget override.
+
+A successful receipt is only the original Core ledger's child-enqueue
+acknowledgement. It does not mean generation completed, a model request is still
+queued, or a translation was adopted. Inspect that original child task through
+the application's existing task history. The delegate never waits for model
+completion. Missing required service resolution produces Host
+`DependencyUnavailable` before component activation. A later model HTTP or
+credential failure belongs to the already recorded child, rather than becoming
+a missing dependency or refunding its budget. A rejected transport or unknown
+reply does not prove enqueueing had no effect; retain and reconcile the original
+operation instead of submitting another child. Cancellation prevents new calls
+and does not prove rollback of a previously accepted one.
+
+Node tests use synthetic facade/service descriptions and no model or real Host
+channel. Actual prebuilt-package, Host/application pairing and execution
+acceptance require their own evidence. This remains the same undistributed
+`0.1.0-alpha.1` batch. Its changed bytes require a newly reviewed package
+fingerprint; an already installed same-version snapshot is not automatically
+replaced and receives no additional permission.
+
 ## Prepare and inspect
 
 Use Node `>=26.10.0 <27` and Python 3.11 or newer. From the repository root:
@@ -89,9 +150,10 @@ python3 tooling/package-plugin.py examples/philosophy artifacts/candidates/philo
 tsumugi-plugin-package inspect artifacts/candidates/philosophy
 ```
 
-One public definition generates the manifest, tool selector and text-review
-declaration from the original terminology resource. Preparation stages the
-verified SDK's generated structural validators into the ignored `sdk/` directory
+One public definition generates the three-component manifest, tool selector and
+text-review declaration, retaining the original terminology resource and a
+separate generation definition. Preparation stages the verified SDK's generated
+text-review and generation input/receipt/error validators into the ignored `sdk/` directory
 for source tests, using the same `sdkFiles` recipe as packaging. The existing
 public packager copies only the explicit recipe and the verified SDK license and
 lock; it executes no installation scripts. The application Host captures the
@@ -100,8 +162,8 @@ running its components. Installed resources and Skill bytes can be read from
 that captured package without executing code. Inspection supplies no publisher
 authentication, execution grant, model credential or resource adoption.
 
-Inputs are bounded to 64 KiB, 100 records and 8 KiB per text. Outputs are bounded
-to 64 KiB. Unsupported locales, unknown or duplicate concepts, mismatched
+Knowledge inputs are bounded to 64 KiB, 100 records and 8 KiB per text. Their
+outputs are bounded to 64 KiB. Unsupported locales, unknown or duplicate concepts, mismatched
 resource pins, substituted providers or rules, malformed input and cancellation
 fail explicitly. An oversized complete report is rejected without truncation.
 Never replace a project term or human translation directly with a returned
