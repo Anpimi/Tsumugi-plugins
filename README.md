@@ -87,6 +87,10 @@ See [中文候选构建说明](README.zh-CN.md) for the same operation and evide
 
 ## Build the independent SDK consumer
 
+The public [plugin authoring walkthrough](https://github.com/Anpimi/Tsumugi/blob/main/docs/plugin-authoring.md)
+connects these producer commands to the matching Host inspector, explicit manual
+loading and diagnostics. Use the same experimental protocol snapshot throughout.
+
 Use Rust 1.98 or newer and Python 3.11 or newer. From this checkout:
 
 ```sh

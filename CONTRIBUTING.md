@@ -1,5 +1,14 @@
 # Contributing
 
+For the end-to-end development sequence, use Tsumugi's public
+[plugin authoring walkthrough](https://github.com/Anpimi/Tsumugi/blob/main/docs/plugin-authoring.md)
+with a matching experimental Host/SDK snapshot. This repository's
+[SDK preparation](README.md#build-the-independent-sdk-consumer),
+[Rust example](examples/flat-json/README.md#build-and-package) and
+[JavaScript package](plugins/webvtt/README.md) provide the independent producer
+steps. Their domain and packaging checks do not start the desktop application or
+prove a complete runtime compatibility matrix.
+
 Keep domain behavior and tests in the owning plugin directory. Preserve the
 logical IDs `stardew-smapi` and `webvtt` when moving existing implementations.
 Record the original public source paths and commit in each package's provenance

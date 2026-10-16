@@ -1,5 +1,8 @@
 # Tsumugi 插件候选构建
 
+[插件开发指南（英文）](https://github.com/Anpimi/Tsumugi/blob/main/docs/plugin-authoring.md)
+串联固定 SDK、独立样例打包、匹配 Host 的检查器、人工加载与诊断；各环节需使用同一实验协议快照。
+
 本页说明独立候选构建及其证据边界。完整仓库、领域包与 SDK 用法以
 [英文 README](README.md) 和各包公开文档为准。
 
