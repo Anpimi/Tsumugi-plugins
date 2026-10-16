@@ -57,6 +57,10 @@ PR 只有 `contents: read`，checkout 不保留凭据，无发布密钥、特权
 Worker→Core 采纳及清洁离线应用验收，需要各自的独立证据；候选构建绿灯
 不能替代这些门禁，也不证明已具备发布条件。
 
+这些固定组合由单独的[兼容性矩阵指南](tooling/COMPATIBILITY.md)说明；运行该矩阵
+会生成新的兼容性证据，不会回写或改变本次独立候选构建记录的
+`runtimeCompatibility: not-run` 状态。
+
 当前选定的 SDK 使用 Process3：JavaScript 入口按冻结集合逐项 `register(id, handler)`，
 三个默认组件仍为 Project scope，Native helper 仅支持单项集合。应从此 SDK 重新准备
 JavaScript 包并重建 Native Worker，旧 Process1/2 明确拒绝；领域契约和同一未分发
