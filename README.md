@@ -83,7 +83,10 @@ Candidate Host × released plugins, candidate plugins × supported Hosts, paired
 application/SDK/plugin combinations, real Worker→Core adoption and final clean
 offline application runs require separate fixed-combination evidence. A green
 independent-build job does not complete those gates or make a package publishable.
-See [中文候选构建说明](README.zh-CN.md) for the same operation and evidence boundaries.
+See the [compatibility matrix guide](tooling/COMPATIBILITY.md) for those explicit
+Host/plugin/runtime combinations and their evidence limits. See
+[中文候选构建说明](README.zh-CN.md) for the same candidate-build operation and
+evidence boundaries.
 
 ## Build the independent SDK consumer
 
