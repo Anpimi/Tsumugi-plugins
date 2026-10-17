@@ -3,10 +3,27 @@
 The SMAPI profile is derived from Tsumugi commit
 `1873fb6666365a7ca898689449f0b7a599e5855e`, under its MIT license:
 
-- `crates/core/src/content/smapi.rs`: JSONC, manifest, native identity and source ranges.
-- `crates/core/src/content/build.rs`: canonical flat locale construction and validation.
-- `crates/core/src/content/translation.rs`: flat existing-translation decoding baseline.
-- `crates/core/src/review.rs`: named marker syntax, counts and control characters.
+The Rust implementation was ported to JavaScript, not moved byte-for-byte. The
+path mappings below were first imported by plugin repository commit
+`f2f3bca95e3e892a13fd884b190ab1463ac0b96e`:
+
+- `crates/core/src/content/smapi.rs` →
+  `plugins/stardew-smapi/components/smapi.mjs`: JSONC, manifest, native identity
+  and source ranges.
+- `crates/core/src/content/build.rs` →
+  `plugins/stardew-smapi/components/smapi.mjs`: canonical flat locale
+  construction and validation.
+- `crates/core/src/content/translation.rs` →
+  `plugins/stardew-smapi/components/smapi.mjs`: flat existing-translation
+  decoding baseline.
+- `crates/core/src/review.rs` →
+  `plugins/stardew-smapi/components/smapi.mjs`: named marker syntax, counts and
+  control characters.
+
+The later independent source-semantic checker, review-check contribution and
+resources, and source-context facts are package-owned additions. Their code and
+contracts are not from the original Rust files listed above; the `review.rs`
+mapping describes the marker-rule lineage only.
 
 The independent JavaScript implementation consumes only the immutable public SDK
 selected by `sdk.lock.json`. It does not import Core or the application. The

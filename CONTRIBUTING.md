@@ -9,10 +9,32 @@ with a matching experimental Host/SDK snapshot. This repository's
 steps. Their domain and packaging checks do not start the desktop application or
 prove a complete runtime compatibility matrix.
 
+For the repository-wide package flow, including the prepared-cache `--offline`
+option, see the [candidate build workflow](README.md#build-and-check-all-independent-candidates).
+
+## Source and maintenance responsibilities
+
+Third-party developers may develop and host plugins independently; their source
+does not need to move into this repository. Keep each package's source
+repository, publisher, origin of the package bytes and maintenance owner clear.
+This is the official source and maintenance repository for the packages it owns.
+Registry metadata supports package discovery; a Market can provide search and
+display over that metadata. A listing does not make a package officially maintained or security
+audited, and this repository does not promise to host a Registry or Market.
+
+Before installing, verify the package's source and publisher and complete the
+consuming application's current trust and permission checks for those exact
+package bytes. A Registry or Market listing is not approval to install or
+execute a package.
+For publication through a signed offline repository, use the matching Host
+snapshot's [signed repository flow](https://github.com/Anpimi/Tsumugi/blob/main/crates/plugin-host/README.md#signed-offline-repositories);
+this source-build workflow and package discovery do not replace that flow.
+
 Keep domain behavior and tests in the owning plugin directory. Preserve the
 logical IDs `stardew-smapi` and `webvtt` when moving existing implementations.
-Record the original public source paths and commit in each package's provenance
-before copying code; retain applicable licenses and notices.
+Before copying or porting an existing implementation, record its original public
+source paths and source commit, plus the first import commit, in package
+provenance; retain applicable licenses and notices.
 
 Consume only the pinned public SDK and public conformance tools. Do not import
 Core, ProjectStore, desktop state, or private project documents. Protocol changes
