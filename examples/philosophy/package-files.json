@@ -12,8 +12,11 @@
     { "source": "javascript/validate-text-review-declaration.mjs", "target": "sdk/validate-text-review-declaration.mjs" },
     { "source": "javascript/validate-text-review-report.mjs", "target": "sdk/validate-text-review-report.mjs" },
     { "source": "javascript/validate-generation-service-input.mjs", "target": "sdk/validate-generation-service-input.mjs" },
+    { "source": "javascript/validate-generation-component-input.mjs", "target": "sdk/validate-generation-component-input.mjs" },
     { "source": "javascript/validate-generation-service-receipt.mjs", "target": "sdk/validate-generation-service-receipt.mjs" },
     { "source": "javascript/validate-generation-service-error.mjs", "target": "sdk/validate-generation-service-error.mjs" },
+    { "source": "javascript/tool-query.mjs", "target": "sdk/tool-query.mjs" },
+    { "source": "javascript/validate-tool-declaration.mjs", "target": "sdk/validate-tool-declaration.mjs" },
     { "source": "LICENSE", "target": "sdk/LICENSE" }
   ]
 }

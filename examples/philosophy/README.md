@@ -81,61 +81,61 @@ AI execution loop have been accepted merely because metadata is present.
 
 ## Optional generation service client
 
-The same package also contains an independent JavaScript `generation` component
-at `components/generation.mjs`. Its `generation-delegate` callable uses
-`org.tsumugi.examples.philosophy-generation-delegate` schema/behavior **1/1**.
-This Attempt-scoped component has one required, single-provider dependency on
-the public `tsumugi.work-plan-generation` **1/1** service. It uses that service's
-original `tsumugi.work-plan-generation-input`,
-`tsumugi.work-plan-generation-receipt` and
-`tsumugi.work-plan-generation-error` schemas, all **1/1**, and declares no
-profile. It does not apply the terminology profile to generated text.
+The package's independent Attempt JavaScript `generation` component at
+`components/generation.mjs` explicitly consumes the public SDK's
+`tsumugi.generation-component-input` **1/1** wrapper. Its `generation-delegate`
+capability advances its own schema/behavior contract to **2/2** for this changed
+input and query prerequisite; Core receipt and finite error schemas stay **1/1**.
+This replaces its earlier generation-only input: use a matching Host and prepare
+one terminology query through the work plan before starting the component.
 
-The capability has an `external` effect and requests only the matching
-`project-service` permission. Package approval therefore displays the union of
-the existing captured-input permission and this additional service permission.
-The original `query` and `check` capabilities remain read-only and request only
-captured input; their Project component has no required service. Inert Resources
-and Skills retain their data component. They can still be read, queried or
-checked without activating generation or providing an AI service. Installing or
-enabling the package does not authorize this external effect.
+The component declares separate required single-provider dependencies and
+`project-service` permissions for the original Core WorkPlan generation service
+and the original Philosophy query contract. The read-only knowledge component,
+its captured-input permissions, domain algorithms, Resources and Skill remain
+available without starting generation. Installation or package approval supplies
+neither the component grant nor the work plan's independent query consent.
 
-The delegate accepts only the SDK's fixed child `taskId`, `attemptId` and
-nonempty distinct `unitIds` subset, within **16 KiB** and **100 units**. It checks
-the exact captured service descriptor, invocation schema and absent profile,
-then makes one `metadata.services.call(handleId, input.utf8)` with the original
-bytes. It preserves the service's `succeeded`, `failed` or `unknown` outcome and
-original receipt/error bytes, within **1 KiB**. SDK-generated validators come
-from the selected immutable archive; this package adds no protocol codec,
-executor, model adapter or retry path.
+The Host freezes one selected query's complete payload, handle, call identity and
+original tool binding. The component checks the captured facade and SDK wrapper,
+executes that exact query once, and checks the original domain result's corpus,
+languages, query basis and selected concepts. Empty matches are valid. Query
+failure reports component `failed/unavailable`; an unknown query reports
+`unknown/outcome-unknown`. Both stop before a new Core call. The original query
+ledger retains its own result. Transport rejection stays an error, without a
+retry or a fabricated acknowledgement; cancellation prevents further calls.
 
-The actual application resolves the child identities and source subset against
-the original authorized WorkPlan. The existing generation choice, read,
-prepare and start path selects the installed component and independently
-approved environment, and requires its own ordinary execution consent. The
-application's generation-service factory retains the original project, plan,
-scope, permissions, source, sharing decision, model destination, deadline and
-cumulative budget. The client supplies no source text, philosophical context,
-prompt, model, endpoint, credential, grant or budget override.
+Only after a successful query does the delegate call the original Core generation
+service once with the unchanged fixed child `taskId`, `attemptId` and distinct
+`unitIds` subset. The wrapper is bounded to **1 MiB**, while that original child
+request remains bounded to **16 KiB** and **100 units**. The delegate preserves
+the actual Core service's success, failure or unknown receipt/error bytes within
+**1 KiB**. A query result is an unadopted reference: this composition gates child
+submission on completing the selected lookup. It does not inject terminology or
+reference text into the model prompt. The original Core configuration, sharing
+decision, model destination, cumulative budget and human controls remain the
+authority; the client provides no credentials, grants or model override.
 
-A successful receipt is only the original Core ledger's child-enqueue
-acknowledgement. It does not mean generation completed, a model request is still
-queued, or a translation was adopted. Inspect that original child task through
-the application's existing task history. The delegate never waits for model
-completion. Missing required service resolution produces Host
-`DependencyUnavailable` before component activation. A later model HTTP or
-credential failure belongs to the already recorded child, rather than becoming
-a missing dependency or refunding its budget. A rejected transport or unknown
-reply does not prove enqueueing had no effect; retain and reconcile the original
-operation instead of submitting another child. Cancellation prevents new calls
-and does not prove rollback of a previously accepted one.
+Facades use A's exact outer attempt. The query component B retains its own
+execution scope and independent grant; the descriptor is not B's execution
+identity. Original SDK-generated validators and tool-query helpers come from the
+selected immutable producer-qualified archive and package recipe, with their
+license and lock. This package introduces no protocol codec, executor, model
+adapter or retry mechanism.
 
-Node tests use synthetic facade/service descriptions and no model or real Host
-channel. Actual prebuilt-package, Host/application pairing and execution
-acceptance require their own evidence. This remains the same undistributed
-`0.1.0-alpha.1` batch. Its changed bytes require a newly reviewed package
-fingerprint; an already installed same-version snapshot is not automatically
-replaced and receives no additional permission.
+A generation receipt acknowledges original child admission, rather than model
+completion or adoption. Inspect the original child task in application history.
+Missing required services are refused before activation. A later model or
+credential failure belongs to an already recorded child. Unknown transport does
+not prove enqueueing had no effect, and cancellation does not roll back a child
+already accepted by Core. Reopening reads history without restoring execution
+permission or replacing a captured query or shared Application instance.
+
+Node tests use synthetic facade responses; real prebuilt-package/Host/Core
+pairing requires separate evidence. This remains the same undistributed
+`0.1.0-alpha.1` batch. New input, dependency and package bytes need explicit review;
+an installed same-version snapshot is not automatically replaced or given the
+additional service permission.
 
 ## Prepare and inspect
 

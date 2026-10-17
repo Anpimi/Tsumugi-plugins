@@ -8,7 +8,8 @@
 
 - 增加独立 Attempt 作用域的 `generation` 组件、带命名空间的
   `generation-delegate` 能力及 required-single WorkPlan generation 服务依赖。
-  该 External 能力只申请对应 ProjectService 权限；包权限并集增加，原知识
+  及独立的已准备查询依赖。该 External 能力申请两项对应 ProjectService 权限；
+  包权限并集增加，原知识
   query／check 的权限、契约和作用域保持不变。使用固定 SDK validator，单次转交
   准确 child 身份／源单元子集，保留原成功、失败或 unknown 的 receipt／error
   字节，不提供 prompt、模型访问、重试或完成声明。Receipt 仅确认 child 入账；
@@ -16,6 +17,12 @@
   字节及权限须单独审查，不自动替换已安装的同版本快照。
 
 ### Changed
+
+- 将 generation delegate 的旧输入替换为有界 SDK 组件 wrapper，并单独声明已准备
+  术语查询依赖。  该能力推进至 schema／behavior **2/2**，Core 服务 schema 保持 **1/1**。
+  先完成一次准确查询，再提交不变的 Core child；保留空命中、查询
+  失败／unknown、transport 与取消语义。参考仍未采纳，不覆写模型 prompt。
+  同一未分发 alpha.1 批次的新包字节和权限须明确审查，旧 SDK 归档及已安装快照保留。
 
 - 通过公共 `contributions` 与 `register(id, handler)` API 登记准确能力集合；
   setup／退出使用 Process-3 组件身份，默认 Project 作用域及领域行为保持不变。

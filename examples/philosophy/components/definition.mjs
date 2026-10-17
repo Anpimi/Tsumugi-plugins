@@ -11,15 +11,18 @@ export const OPERATIONS = Object.freeze({
 });
 
 // Generation is a separate effectful component, not another knowledge query.
+const generationServiceLimits = { maxInputBytes: 16 * 1024, maxOutputBytes: 1024, concurrency: 1, timeoutMs: 5000 };
 export const GENERATION = Object.freeze({
   componentId: 'generation',
   contributionId: 'generation-delegate',
-  contract: contract('org.tsumugi.examples.philosophy-generation-delegate'),
+  contract: { id: 'org.tsumugi.examples.philosophy-generation-delegate', schemaVersion: 2, behaviorVersion: 2 },
   service: contract('tsumugi.work-plan-generation'),
-  input: contract('tsumugi.work-plan-generation-input'),
+  input: contract('tsumugi.generation-component-input'),
+  serviceInput: contract('tsumugi.work-plan-generation-input'),
   output: contract('tsumugi.work-plan-generation-receipt'),
   error: contract('tsumugi.work-plan-generation-error'),
-  limits: { maxInputBytes: 16 * 1024, maxOutputBytes: 1024, concurrency: 1, timeoutMs: 5000 },
+  limits: { ...generationServiceLimits, maxInputBytes: 1024 * 1024 },
+  serviceLimits: generationServiceLimits,
 });
 
 export const conceptRule = id => contract(`org.tsumugi.examples.philosophy-term.${id}`);

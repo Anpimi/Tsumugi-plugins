@@ -121,8 +121,8 @@ explicitly singleton. Manifest and
 content-exchange versions, domain profiles and the undistributed alpha.1 package
 versions are unchanged. This selection does not publish or install a package.
 
-The selected SDK also includes bounded generation-service data and declared
-text-query payload preparation. These data helpers grant no execution authority;
+The selected SDK also includes the bounded generation-component input wrapper,
+generation-service data and declared text-query payload preparation. These data helpers grant no execution authority;
 see [SDK provenance](artifacts/sdk/README.md) for the current artifact boundary.
 
 Development snapshots are stored under `artifacts/sdk/<producer-commit>/` so an

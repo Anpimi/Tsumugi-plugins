@@ -48,15 +48,16 @@ const version = JSON.parse(boundedFile(new URL('../package.json', import.meta.ur
 const resourceUtf8 = boundedFile(new URL('../resources/terminology.json', import.meta.url)).toString('utf8');
 const resource = createKnowledgeEngine(resourceUtf8).resource;
 const review = textReviewDeclaration(resource);
+const generationServices = [GENERATION.service, OPERATIONS.query.contract];
 const manifest = {
   protocolVersion: 1,
   plugin: { publisher: 'org.tsumugi.examples', id: 'philosophy', version },
-  permissions: [{ kind: 'captured-input' }, { kind: 'project-service', contract: GENERATION.service }],
+  permissions: [{ kind: 'captured-input' }, ...generationServices.map(contract => ({ kind: 'project-service', contract }))],
   components: [
     { id: 'knowledge', scope: 'project', runtime: 'javascript', entrypoint: 'components/component.mjs', dependencies: [], exit: { stopTimeoutMs: 1000, cleanupTimeoutMs: 1000 } },
     { id: 'reference', scope: 'application', runtime: 'data', entrypoint: null, dependencies: [], exit: { stopTimeoutMs: 1000, cleanupTimeoutMs: 1000 } },
     { id: GENERATION.componentId, scope: 'attempt', runtime: 'javascript', entrypoint: 'components/generation.mjs',
-      dependencies: [{ contract: GENERATION.service, required: true, selection: 'single' }], exit: { stopTimeoutMs: 1000, cleanupTimeoutMs: 1000 } },
+      dependencies: generationServices.map(contract => ({ contract, required: true, selection: 'single' })), exit: { stopTimeoutMs: 1000, cleanupTimeoutMs: 1000 } },
   ],
   contributions: [
     ...Object.entries(OPERATIONS).map(([id, operation]) => ({ id, componentId: 'knowledge', contribution: { kind: 'capability', declaration: {
@@ -65,7 +66,7 @@ const manifest = {
     } } })),
     { id: GENERATION.contributionId, componentId: GENERATION.componentId, contribution: { kind: 'capability', declaration: {
       contract: GENERATION.contract, inputSchema: GENERATION.input, outputSchema: GENERATION.output, errorSchema: GENERATION.error,
-      profiles: [], effect: 'external', permissions: [{ kind: 'project-service', contract: GENERATION.service }], limits: GENERATION.limits,
+      profiles: [], effect: 'external', permissions: generationServices.map(contract => ({ kind: 'project-service', contract })), limits: GENERATION.limits,
     } } },
     { id: 'terminology', componentId: 'reference', contribution: { kind: 'resource', schema: RESOURCE_SCHEMA, path: 'resources/terminology.json' } },
     { id: 'text-review', componentId: 'reference', contribution: { kind: 'resource', schema: TEXT_REVIEW_DECLARATION_SCHEMA, path: 'resources/text-review.json' } },

@@ -96,3 +96,11 @@ and a component instance principal separately from each invocation provider.
 JavaScript setup uses `contributions` and `register(id, handler)`; the Native
 facade rejects a multi-member activation before calling author code. These
 contracts grant no execution permission and do not widen default Project scopes.
+
+The selected producer-qualified snapshot includes the separate bounded
+`generation-component-input` wrapper and its SDK-generated JavaScript validator.
+Philosophy explicitly consumes it to complete one prepared terminology lookup
+before submitting an unchanged Core generation request. The lock fixes the exact
+producer and archive; earlier archives remain intact. Process3, manifest1 and the
+same undistributed SDK `0.1.0-alpha.1` version remain unchanged. Neither the data
+wrapper nor archive selection grants tool or model execution authority.

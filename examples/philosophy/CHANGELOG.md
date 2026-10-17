@@ -8,7 +8,8 @@ The English changelog is authoritative; `CHANGELOG.zh-CN.md` mirrors it.
 
 - Add an independent Attempt-scoped `generation` component with the namespaced
   `generation-delegate` capability and required single WorkPlan generation
-  service. The external capability requests only that ProjectService permission;
+  service and a separate prepared query dependency. The external capability
+  requests those ProjectService permissions;
   the package permission union grows while the original knowledge query/check
   permissions, contracts and scopes remain unchanged. Forward one fixed child
   identity/source subset and preserve original success, failure or unknown
@@ -19,6 +20,15 @@ The English changelog is authoritative; `CHANGELOG.zh-CN.md` mirrors it.
   permission, without replacing an installed same-version snapshot automatically.
 
 ### Changed
+
+- Replace the generation delegate's old input with the bounded SDK component
+  wrapper and a separately declared, prepared terminology-query dependency.
+  Advance that capability to schema/behavior **2/2**; Core service schemas remain
+  **1/1**. Complete one exact lookup before submitting the unchanged Core child; preserve
+  empty matches, query failure/unknown, transport and cancellation semantics.
+  References remain unadopted and do not override model prompts. New package
+  bytes and permission need explicit review in the same undistributed alpha.1
+  batch; earlier SDK archives and installed snapshots remain intact.
 
 - Register the exact callable roster through the public `contributions` and
   `register(id, handler)` API. Setup and shutdown use Process-3 component

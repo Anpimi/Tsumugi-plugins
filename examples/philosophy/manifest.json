@@ -16,6 +16,14 @@
         "schemaVersion": 1,
         "behaviorVersion": 1
       }
+    },
+    {
+      "kind": "project-service",
+      "contract": {
+        "id": "org.tsumugi.examples.philosophy-query",
+        "schemaVersion": 1,
+        "behaviorVersion": 1
+      }
     }
   ],
   "components": [
@@ -50,6 +58,15 @@
         {
           "contract": {
             "id": "tsumugi.work-plan-generation",
+            "schemaVersion": 1,
+            "behaviorVersion": 1
+          },
+          "required": true,
+          "selection": "single"
+        },
+        {
+          "contract": {
+            "id": "org.tsumugi.examples.philosophy-query",
             "schemaVersion": 1,
             "behaviorVersion": 1
           },
@@ -168,11 +185,11 @@
         "declaration": {
           "contract": {
             "id": "org.tsumugi.examples.philosophy-generation-delegate",
-            "schemaVersion": 1,
-            "behaviorVersion": 1
+            "schemaVersion": 2,
+            "behaviorVersion": 2
           },
           "inputSchema": {
-            "id": "tsumugi.work-plan-generation-input",
+            "id": "tsumugi.generation-component-input",
             "schemaVersion": 1,
             "behaviorVersion": 1
           },
@@ -196,10 +213,18 @@
                 "schemaVersion": 1,
                 "behaviorVersion": 1
               }
+            },
+            {
+              "kind": "project-service",
+              "contract": {
+                "id": "org.tsumugi.examples.philosophy-query",
+                "schemaVersion": 1,
+                "behaviorVersion": 1
+              }
             }
           ],
           "limits": {
-            "maxInputBytes": 16384,
+            "maxInputBytes": 1048576,
             "maxOutputBytes": 1024,
             "concurrency": 1,
             "timeoutMs": 5000
