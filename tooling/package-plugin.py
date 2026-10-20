@@ -164,15 +164,20 @@ def package(source, output):
         spec = importlib.util.spec_from_file_location("prepare_sdk", repository / "tooling" / "prepare-sdk.py")
         owner = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(owner)
-        sdk_root = owner.prepare(repository)
+        sdk_root, verified_files = owner.prepare_with_files(repository)
         sdk_fd = directory(sdk_root)
         try:
             for selected in sdk_files:
                 captured = snapshot(sdk_fd, selected["source"], MAX_BYTES)
                 if snapshot(sdk_fd, selected["source"], MAX_BYTES) != captured:
                     raise ValueError("selected SDK file changed while captured")
-                files[selected["target"]] = captured
-                total += len(captured[0])
+                expected = verified_files.get(selected["source"])
+                if (expected is None or captured[0] != expected[0]
+                        or (os.name == "posix" and captured[1] != expected[1])):
+                    raise ValueError("selected SDK file differs from the verified artifact")
+                # The immutable archive, not mutable cache metadata, owns flags.
+                files[selected["target"]] = expected
+                total += len(expected[0])
         finally:
             os.close(sdk_fd)
         repository_fd = directory(repository)

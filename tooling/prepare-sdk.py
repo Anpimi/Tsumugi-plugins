@@ -14,7 +14,8 @@ import tarfile
 import tempfile
 
 
-def prepare(root: Path) -> Path:
+def prepare_with_files(root: Path) -> tuple[Path, dict[str, tuple[bytes, bool]]]:
+    """Return the verified artifact bytes/flags with their checked build cache."""
     lock = json.loads((root / "sdk.lock.json").read_text(encoding="utf-8"))
     if lock["formatVersion"] != 1 or lock["package"] != "tsumugi-plugin-sdk":
         raise ValueError("unsupported SDK lock")
@@ -60,7 +61,8 @@ def prepare(root: Path) -> Path:
             if (not member.isfile() or not path.parts or path.parts[0] != package
                     or len(path.parts) < 2 or any(part in {".", ".."} for part in path.parts)
                     or path.is_absolute() or "\\" in member.name
-                    or str(path) != member.name or member.name in files):
+                    or str(path) != member.name or member.name in files
+                    or member.linkname or member.sparse is not None or member.mode & ~0o777):
                 raise ValueError("SDK archive contains a noncanonical file")
             total += member.size
             if len(files) >= 256 or member.size < 0 or total > 16 * 1024 * 1024:
@@ -72,9 +74,11 @@ def prepare(root: Path) -> Path:
                 data = stream.read(member.size + 1)
             if len(data) != member.size:
                 raise ValueError("SDK archive file size mismatch")
-            files[member.name] = data
+            files[member.name] = (data, bool(member.mode & 0o111))
     if not files or f"{package}/Cargo.toml" not in files:
         raise ValueError("SDK archive has no package manifest")
+
+    verified_files = {name[len(package) + 1:]: value for name, value in files.items()}
 
     cache = root / ".cache"
     sdk_cache = cache / "sdk"
@@ -96,31 +100,39 @@ def prepare(root: Path) -> Path:
             for name in filenames:
                 path = base / name
                 key = f"{package}/{path.relative_to(destination).as_posix()}"
-                if key not in files or not path.is_file() or path.stat().st_size != len(files[key]):
+                if key not in files or not path.is_file() or path.stat().st_size != len(files[key][0]):
                     raise ValueError("SDK cache contains an unexpected file")
-                found[key] = path.read_bytes()
+                data = bounded_helper_file(path, 16 * 1024 * 1024,
+                                           expected_executable=files[key][1])
+                found[key] = (data, files[key][1])
         if found != files:
             raise ValueError("SDK cache differs from the selected artifact; remove it explicitly")
-        prepare_context_helpers(root, destination)
-        return destination
+        prepare_context_helpers(root, destination, verified_files)
+        return destination, verified_files
 
     candidate = Path(tempfile.mkdtemp(prefix="prepare-", dir=sdk_cache))
     try:
-        for name, data in files.items():
+        for name, (data, executable) in files.items():
             path = candidate.joinpath(*PurePosixPath(name).parts)
             path.parent.mkdir(parents=True, exist_ok=True)
             with path.open("xb") as output:
+                if os.name == "posix":
+                    os.fchmod(output.fileno(), 0o700 if executable else 0o600)
                 output.write(data)
         if destination.exists() or destination.is_symlink():
             raise ValueError("SDK cache appeared during preparation; rerun to verify it")
         (candidate / package).rename(destination)
     finally:
         shutil.rmtree(candidate)
-    prepare_context_helpers(root, destination)
-    return destination
+    prepare_context_helpers(root, destination, verified_files)
+    return destination, verified_files
 
 
-def bounded_helper_file(path: Path, limit: int) -> bytes:
+def prepare(root: Path) -> Path:
+    return prepare_with_files(root)[0]
+
+
+def bounded_helper_file(path: Path, limit: int, *, expected_executable: bool | None = None) -> bytes:
     flags = os.O_RDONLY
     if os.name == "posix":
         flags |= os.O_NOFOLLOW | os.O_NONBLOCK
@@ -131,6 +143,9 @@ def bounded_helper_file(path: Path, limit: int) -> bytes:
         if (not stat.S_ISREG(before.st_mode) or before.st_nlink != 1
                 or before.st_size > limit):
             raise ValueError("SDK helper input is not a bounded ordinary file")
+        if (expected_executable is not None and os.name == "posix"
+                and bool(before.st_mode & 0o111) != expected_executable):
+            raise ValueError("SDK cache executable flag differs from the selected artifact")
         data = stream.read(limit + 1)
         after = os.fstat(stream.fileno())
         selected = path.stat(follow_symlinks=False)
@@ -142,7 +157,8 @@ def bounded_helper_file(path: Path, limit: int) -> bytes:
         return data
 
 
-def prepare_context_helpers(root: Path, sdk: Path) -> None:
+def prepare_context_helpers(root: Path, sdk: Path,
+                            verified_files: dict[str, tuple[bytes, bool]]) -> None:
     """Stage the same SDK helpers selected by each domain's package recipe."""
     def unique(pairs):
         result = {}
@@ -192,12 +208,18 @@ def prepare_context_helpers(root: Path, sdk: Path) -> None:
             target = plugin.joinpath(*PurePosixPath(selected["target"]).parts)
             if target.is_symlink() or (target.exists() and not target.is_file()):
                 raise ValueError("SDK helper destination is not an ordinary file")
-            data = bounded_helper_file(source, 1024 * 1024)
-            if target.exists() and bounded_helper_file(target, 1024 * 1024) == data:
+            expected = verified_files.get(selected["source"])
+            if expected is None:
+                raise ValueError("SDK helper selector is missing from the selected artifact")
+            data, executable = expected
+            if bounded_helper_file(source, 1024 * 1024, expected_executable=executable) != data:
+                raise ValueError("SDK helper source differs from the selected artifact")
+            if (target.exists() and bounded_helper_file(target, 1024 * 1024) == data
+                    and (os.name != "posix" or bool(target.stat().st_mode & 0o111) == executable)):
                 continue
-            copies.append((target, data))
+            copies.append((target, data, executable))
     # Reject every recipe/selector before modifying any ignored helper output.
-    for target, data in copies:
+    for target, data, executable in copies:
         target.parent.mkdir(exist_ok=True)
         if target.parent.is_symlink() or not target.parent.is_dir():
             raise ValueError("SDK helper destination is not an ordinary directory")
@@ -211,6 +233,8 @@ def prepare_context_helpers(root: Path, sdk: Path) -> None:
             if (not stat.S_ISREG(info.st_mode) or info.st_nlink != 1
                     or info.st_size > 1024 * 1024):
                 raise ValueError("SDK helper destination is not a bounded ordinary file")
+            if os.name == "posix":
+                os.fchmod(stream.fileno(), 0o700 if executable else 0o600)
             stream.truncate(0)
             stream.write(data)
 

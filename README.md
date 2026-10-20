@@ -111,6 +111,11 @@ SHA-256 and its original source commit. The archive was built from Tsumugi's SDK
 it is a consumer artifact, not a fork or another protocol source. It has not been
 published to crates.io. `prepare-sdk.py` verifies and materializes its exact files
 under the ignored `.cache/sdk/` directory. Do not edit that cache or the archive.
+The verified archive owns both file bytes and executable flags. Unix cache
+checks compare both, and preparation preserves those flags in selected helper
+copies. The packager uses the same immutable archive values after checking its
+cache reads; changing cache permissions cannot silently change a package.
+Unexpected cache contents or flags are refused and retained for inspection.
 Changes to SDK contracts belong in Tsumugi and require a new explicitly selected
 artifact here. The archive contains the public contract/schema harness and
 JavaScript declarations as well as the Rust data API.

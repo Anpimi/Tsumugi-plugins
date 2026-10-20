@@ -2,10 +2,13 @@ import hashlib
 import importlib.util
 import io
 import json
+import os
+import shutil
 from pathlib import Path
 import tarfile
 import tempfile
 import unittest
+from unittest import mock
 
 
 spec = importlib.util.spec_from_file_location(
@@ -16,7 +19,7 @@ spec.loader.exec_module(owner)
 
 
 class PreparationTests(unittest.TestCase):
-    def source(self, temporary):
+    def source(self, temporary, executable=()):
         root = Path(temporary)
         package = "tsumugi-plugin-sdk-0.1.0-alpha.1"
         commit = "a" * 40
@@ -38,6 +41,7 @@ class PreparationTests(unittest.TestCase):
             for name, data in files.items():
                 member = tarfile.TarInfo(package + "/" + name)
                 member.size = len(data)
+                member.mode = 0o755 if name in executable else 0o644
                 target.addfile(member, io.BytesIO(data))
         lock = {"formatVersion": 1, "package": "tsumugi-plugin-sdk",
                 "version": "0.1.0-alpha.1", "sourceCommit": commit,
@@ -45,6 +49,64 @@ class PreparationTests(unittest.TestCase):
                 "sha256": hashlib.sha256(archive.read_bytes()).hexdigest()}
         (root / "sdk.lock.json").write_text(json.dumps(lock), encoding="utf-8")
         return root, archive, lock, files
+
+    @unittest.skipUnless(os.name == "posix", "requires Unix executable mode bits")
+    def test_executable_flags_survive_preparation_and_helper_materialization(self):
+        selected = "javascript/source-context.mjs"
+        with tempfile.TemporaryDirectory() as temporary:
+            root, _, _, files = self.source(temporary, executable=(selected,))
+            cache = owner.prepare(root)
+            self.assertTrue((cache / selected).stat().st_mode & 0o111)
+            self.assertFalse((cache / "Cargo.toml").stat().st_mode & 0o111)
+            for package in ("webvtt", "stardew-smapi"):
+                helper = root / "plugins" / package / "sdk/source-context.mjs"
+                self.assertEqual(helper.read_bytes(), files[selected])
+                self.assertTrue(helper.stat().st_mode & 0o111)
+            self.assertEqual(owner.prepare(root), cache)
+
+    @unittest.skipUnless(os.name == "posix", "requires Unix executable mode bits")
+    def test_executable_flags_in_a_changed_cache_are_rejected_and_retained(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root, _, _, files = self.source(temporary)
+            cache = owner.prepare(root)
+            selected = cache / "javascript/source-context.mjs"
+            selected.chmod(0o700)
+            with self.assertRaisesRegex(ValueError, "SDK cache"):
+                owner.prepare(root)
+            self.assertEqual(selected.read_bytes(), files["javascript/source-context.mjs"])
+            self.assertTrue(selected.stat().st_mode & 0o111)
+
+    @unittest.skipUnless(os.name == "posix", "packager uses Unix descriptor IO")
+    def test_packager_uses_the_verified_sdk_flags_and_refuses_a_changed_cache(self):
+        selected = "javascript/source-context.mjs"
+        with tempfile.TemporaryDirectory() as temporary:
+            root, _, _, files = self.source(temporary, executable=(selected,))
+            tooling = root / "tooling"
+            tooling.mkdir()
+            shutil.copyfile(Path(__file__).parents[1] / "prepare-sdk.py", tooling / "prepare-sdk.py")
+            spec = importlib.util.spec_from_file_location(
+                "sdk_flag_packager", Path(__file__).parents[1] / "package-plugin.py")
+            packager = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(packager)
+            candidate = root / "candidate"
+            candidate.mkdir()
+            (candidate / "manifest.json").write_bytes(b'{"synthetic":true}\n')
+            (candidate / "component.mjs").write_bytes(b"not a program\n")
+            (candidate / "package-files.json").write_text(json.dumps({
+                "formatVersion": 1, "files": ["manifest.json", "component.mjs"],
+                "sdkFiles": [{"source": selected, "target": "sdk/source-context.mjs"}],
+            }), encoding="utf-8")
+            output = root / "packaged"
+            with mock.patch.object(packager, "__file__", str(tooling / "package-plugin.py")):
+                packager.package(candidate, output)
+                helper = output / "sdk/source-context.mjs"
+                self.assertEqual(helper.read_bytes(), files[selected])
+                self.assertTrue(helper.stat().st_mode & 0o111)
+                cache = owner.prepare(root)
+                (cache / selected).chmod(0o600)
+                with self.assertRaisesRegex(ValueError, "SDK cache"):
+                    packager.package(candidate, root / "refused")
+                self.assertFalse((root / "refused").exists())
 
     def test_verified_bytes_are_materialized_and_existing_cache_is_rechecked(self):
         with tempfile.TemporaryDirectory() as temporary:
