@@ -65,3 +65,36 @@ test('the selected extractor and builder preserve their original byte and cancel
   assert.equal(cancelled.kind, 'failed');
   assert.equal(JSON.parse(cancelled.utf8).code, 'cancelled');
 });
+
+test('declared translation facade validates SDK shapes and emits independent checks and typed errors', () => {
+  const raw = '\uFEFFWEBVTT\r\n\r\nMiX\r\n00:01.000 --> 00:02.000\r\n译文 👩🏽‍💻\r\n';
+  const input = { profile: PROFILE, importId: 'import', sourceSetId: 'source-set', sourceSnapshotId: 'snapshot',
+    targetLanguage: 'zh-CN', languageEvidence: 'user-confirmed',
+    nativeScope: { namespace: 'webvtt:source', policy: { id: 'webvtt-cue', schemaVersion: 1, behaviorVersion: 1 } },
+    artifacts: [{ id: 'translation-file', logicalPath: 'translations/zh.vtt', role: 'translation', sha256: digest(raw), utf8: raw }] };
+  const extractor = members.find(value => value.id === 'import-translations');
+  const checker = members.find(value => value.id === 'translation-semantic-check');
+  const extracted = invoke(extractor, input);
+  assert.equal(extracted.kind, 'succeeded');
+  const proposal = JSON.parse(extracted.utf8);
+  assert.deepEqual(proposal.artifacts, input.artifacts);
+  assert.equal(proposal.entries[0].nativeIdentity.value, 'mix');
+  const requirement = { key: { rule: { id: 'webvtt.translation-semantics', schemaVersion: 1, behaviorVersion: 1 },
+    implementation: { kind: 'plugin', provider: { plugin: manifest.plugin, packageDigest: 'a'.repeat(64),
+      componentId: checker.componentId, contributionId: checker.id } } },
+    inputDigest: digest(JSON.stringify(input)), scopeDigest: 'b'.repeat(64), targets: [input.importId],
+    mandatory: true, waivable: false, notApplicable: null };
+  const request = { input, proposal, requirements: [requirement] };
+  const checked = invoke(checker, request);
+  assert.equal(checked.kind, 'succeeded');
+  assert.deepEqual(JSON.parse(checked.utf8)[0].outcome, { kind: 'completed', findings: [] });
+  const altered = structuredClone(request); altered.proposal.entries[0].text = 'forged';
+  assert.equal(JSON.parse(invoke(checker, altered).utf8)[0].outcome.findings[0].code, 'translation-mismatch');
+  for (const [selected, value] of [[extractor, { ...input, unexpected: true }],
+    [checker, { ...request, unexpected: true }], [checker, { input, proposal: {}, requirements: [] }]]) {
+    const failed = invoke(selected, value);
+    assert.equal(failed.kind, 'failed');
+    assert.deepEqual(JSON.parse(failed.utf8), { code: 'invalid-input', artifactId: 'translation-file', detail: 'Operation input does not match the SDK schema.' });
+  }
+  assert.equal(JSON.parse(invoke(extractor, input, AbortSignal.abort()).utf8).code, 'cancelled');
+});

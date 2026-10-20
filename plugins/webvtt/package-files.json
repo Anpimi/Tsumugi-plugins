@@ -15,7 +15,8 @@
     "package-files.json",
     "profiles/source-import.json",
     "profiles/build.json",
-    "profiles/review.json"
+    "profiles/review.json",
+    "profiles/translation-import.json"
   ],
   "sdkFiles": [
     {
@@ -49,6 +50,18 @@
     {
       "source": "javascript/validate-review-check-input.mjs",
       "target": "sdk/validate-review-check-input.mjs"
+    },
+    {
+      "source": "javascript/validate-translation-extraction-input.mjs",
+      "target": "sdk/validate-translation-extraction-input.mjs"
+    },
+    {
+      "source": "javascript/validate-translation-extraction-check-input.mjs",
+      "target": "sdk/validate-translation-extraction-check-input.mjs"
+    },
+    {
+      "source": "javascript/validate-translation-exchange.mjs",
+      "target": "sdk/validate-translation-exchange.mjs"
     },
     {
       "source": "LICENSE",

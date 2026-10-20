@@ -7,6 +7,9 @@ import { SOURCE_CONTEXT_FACTS_PROFILE } from '../sdk/source-context-profile.mjs'
 /** @typedef {import('../../../.cache/sdk/tsumugi-plugin-sdk-0.1.0-alpha.1/javascript/content.js').SourceExtractionInput} SourceExtractionInput */
 /** @typedef {import('../../../.cache/sdk/tsumugi-plugin-sdk-0.1.0-alpha.1/javascript/content.js').ContentExchange} ContentExchange */
 /** @typedef {import('../../../.cache/sdk/tsumugi-plugin-sdk-0.1.0-alpha.1/javascript/content.js').SourceExtractionCheckInput} SourceExtractionCheckInput */
+/** @typedef {import('../../../.cache/sdk/tsumugi-plugin-sdk-0.1.0-alpha.1/javascript/translation.js').TranslationExtractionInput} TranslationExtractionInput */
+/** @typedef {import('../../../.cache/sdk/tsumugi-plugin-sdk-0.1.0-alpha.1/javascript/translation.js').TranslationExchange} TranslationExchange */
+/** @typedef {import('../../../.cache/sdk/tsumugi-plugin-sdk-0.1.0-alpha.1/javascript/translation.js').TranslationExtractionCheckInput} TranslationExtractionCheckInput */
 
 export const MAX_SOURCE_BYTES = 128 * 1024;
 export const MAX_CUES = 2000;
@@ -158,7 +161,7 @@ export function validPayload(text) {
 const note = text => text === 'NOTE' || text.startsWith('NOTE ') || text.startsWith('NOTE\t');
 
 /** Parse the selected profile without reading any filesystem path or executing CSS. */
-export function parseCaptions(raw, signal) {
+export function parseCaptions(raw, signal, { allowEmpty = false } = {}) {
   scalar(raw, 'invalid-source');
   if (Buffer.byteLength(raw) > MAX_SOURCE_BYTES) reject('limit-exceeded', 'Caption source exceeds 128 KiB.');
   cancelled(signal);
@@ -220,7 +223,7 @@ export function parseCaptions(raw, signal) {
       start, end, sourceText: normalize(payload),
       basis: { version: 1, policy: POLICY, nativeId, timing: block[1].text, settings: parsed.settings, layoutDigest } });
   }
-  if (cues.length === 0) reject('invalid-source', 'Caption source has no cues.');
+  if (cues.length === 0 && !allowEmpty) reject('invalid-source', 'Caption source has no cues.');
   cancelled(signal);
   return { cues, bytes, newline: raw.includes('\r\n') ? '\r\n' : raw.includes('\r') ? '\r' : '\n' };
 }
@@ -374,6 +377,115 @@ export function checkSourceSemantics(input, signal) {
       : [{ code: 'source-mismatch', target: input.source.sourceSetId, severity: 'error' }] } }];
   encoded(results);
   return results;
+}
+
+// ICU comes from the selected Node runtime. Project locale membership and the
+// recorded choice remain application-owned; a filename supplies only evidence.
+function canonicalLocale(value) {
+  if (!language(value)) return null;
+  try {
+    const locale = new Intl.Locale(value);
+    return locale.toString() === value ? locale : null;
+  } catch { return null; }
+}
+function capturedTranslations(input, signal) {
+  cancelled(signal); encoded(input); profile(input.profile);
+  if (!opaque(input.importId) || !opaque(input.sourceSetId) || !opaque(input.sourceSnapshotId)
+    || input.languageEvidence !== 'user-confirmed' || input.nativeScope?.namespace !== 'webvtt:source'
+    || !exactContract(input.nativeScope?.policy, 'webvtt-cue')
+    || !Array.isArray(input.artifacts) || input.artifacts.length !== 1) {
+    reject('invalid-input', 'Expected complete fixed caption translation scope and one captured file.');
+  }
+  const artifact = input.artifacts[0];
+  if (!opaque(artifact?.id) || artifact.role !== 'translation' || !digest(artifact.sha256)
+    || sha256(scalar(artifact.utf8)) !== artifact.sha256) reject('invalid-input', 'Captured translation binding mismatch.');
+  const path = typeof artifact.logicalPath === 'string'
+    && /^translations\/([A-Za-z0-9-]{1,128})\.vtt$/.exec(artifact.logicalPath);
+  const stem = path && path[1];
+  const declared = canonicalLocale(stem);
+  const target = canonicalLocale(input.targetLanguage);
+  if (!declared || !target || /^(con|prn|aux|nul|com[0-9]|lpt[0-9])$/i.test(stem)
+    || declared.language !== target.language) {
+    reject('invalid-input', 'Choose one canonical caption filename and a confirmed target with the same base language.');
+  }
+  return { artifact, declaredLanguage: stem, parsed: parseCaptions(artifact.utf8, signal, { allowEmpty: true }) };
+}
+
+/** Extract only operation-local entries; source matching and adoption stay in Core.
+ * @param {TranslationExtractionInput} input @returns {TranslationExchange} */
+export function extractTranslations(input, signal) {
+  const { artifact, declaredLanguage, parsed } = capturedTranslations(input, signal);
+  const output = { profile: { ...PROFILE }, importId: input.importId, sourceSetId: input.sourceSetId,
+    sourceSnapshotId: input.sourceSnapshotId, targetLanguage: input.targetLanguage, declaredLanguage,
+    languageEvidence: input.languageEvidence,
+    nativeScope: { namespace: input.nativeScope.namespace, policy: { ...input.nativeScope.policy } },
+    artifacts: [{ ...artifact }], entries: [], order: [] };
+  for (const cue of parsed.cues) {
+    cancelled(signal); const id = `translation-${cue.ordinal}`;
+    output.entries.push({ id, text: cue.sourceText,
+      source: { artifactId: artifact.id, range: { encoding: 'utf8-byte', start: cue.start, end: cue.end } },
+      nativeIdentity: { namespace: 'webvtt:source', value: cue.canonicalId, policy: contract('webvtt-cue'),
+        display: { value: cue.nativeId, source: { artifactId: artifact.id,
+          range: { encoding: 'utf8-byte', start: cue.idStart, end: cue.idEnd } } } } });
+    output.order.push(id);
+  }
+  cancelled(signal); encoded(output, MAX_CONTENT_BYTES); return output;
+}
+
+function translationRequirement(request) {
+  if (!Array.isArray(request.requirements) || request.requirements.length !== 1) {
+    reject('invalid-input', 'Expected exactly one fixed translation semantic requirement.');
+  }
+  const value = request.requirements[0]; const provider = value.key?.implementation?.provider;
+  if (!exactContract(value.key?.rule, 'webvtt.translation-semantics') || value.key.implementation.kind !== 'plugin'
+    || provider?.plugin?.publisher !== 'org.tsumugi' || provider.plugin.id !== 'webvtt' || provider.plugin.version !== '0.1.0-alpha.1'
+    || provider.componentId !== 'caption-worker' || provider.contributionId !== 'translation-semantic-check'
+    || !digest(provider.packageDigest) || !digest(value.inputDigest) || !digest(value.scopeDigest)
+    || value.mandatory !== true || value.waivable !== false || value.notApplicable !== null
+    || !Array.isArray(value.targets) || value.targets.length !== 1 || value.targets[0] !== request.input.importId) {
+    reject('invalid-input', 'Translation requirement does not match the fixed rule, provider or target.');
+  }
+  return value;
+}
+function faithfulTranslationProposal(proposal, input, captured, signal) {
+  if (!exactContract(proposal.profile, PROFILE.id)
+    || ['importId', 'sourceSetId', 'sourceSnapshotId', 'targetLanguage', 'languageEvidence'].some(key => proposal[key] !== input[key])
+    || proposal.declaredLanguage !== captured.declaredLanguage || proposal.nativeScope?.namespace !== input.nativeScope.namespace
+    || !exactContract(proposal.nativeScope?.policy, 'webvtt-cue') || proposal.artifacts.length !== 1
+    || proposal.entries.length !== captured.parsed.cues.length || proposal.order.length !== captured.parsed.cues.length) return false;
+  const retained = proposal.artifacts[0];
+  if (['id', 'logicalPath', 'role', 'sha256', 'utf8'].some(key => retained[key] !== captured.artifact[key])) return false;
+  const entries = new Map();
+  for (const entry of proposal.entries) {
+    cancelled(signal);
+    if (!opaque(entry.id) || entries.has(entry.id)) return false;
+    entries.set(entry.id, entry);
+  }
+  const ordered = new Set();
+  for (const [index, cue] of captured.parsed.cues.entries()) {
+    cancelled(signal); const id = proposal.order[index]; const entry = entries.get(id);
+    if (!entry || ordered.has(id)) return false;
+    ordered.add(id); const identity = entry.nativeIdentity;
+    if (entry.text !== cue.sourceText || !exactRange(entry.source, captured.artifact.id, cue.start, cue.end)
+      || identity?.namespace !== input.nativeScope.namespace || identity.value !== cue.canonicalId
+      || !exactContract(identity.policy, 'webvtt-cue') || identity.display?.value !== cue.nativeId
+      || !exactRange(identity.display.source, captured.artifact.id, cue.idStart, cue.idEnd)) return false;
+  }
+  return true;
+}
+
+/** Reparse the whole captured file without calling the extractor as an oracle.
+ * @param {TranslationExtractionCheckInput} request */
+export function checkTranslationSemantics(request, signal) {
+  cancelled(signal); encoded(request, MAX_SOURCE_CHECK_BYTES); encoded(request.proposal, MAX_CONTENT_BYTES);
+  const captured = capturedTranslations(request.input, signal);
+  const fixed = translationRequirement(request);
+  const findings = faithfulTranslationProposal(request.proposal, request.input, captured, signal) ? []
+    : [{ code: 'translation-mismatch', target: request.input.importId, severity: 'error' }];
+  cancelled(signal);
+  const output = [{ key: structuredClone(fixed.key), inputDigest: fixed.inputDigest, scopeDigest: fixed.scopeDigest,
+    coveredTargets: [...fixed.targets], outcome: { kind: 'completed', findings } }];
+  encoded(output); return output;
 }
 
 export const REVIEW_RULES = Object.freeze([

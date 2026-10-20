@@ -9,8 +9,8 @@ operations. Use the current paired SDK and Host artifacts; older Process2
 runtime captures cannot execute this facade.
 
 `webvtt` version `0.1.0-alpha.1` is an independent JavaScript component package for
-`webvtt-captions/1`. It extracts captured source, builds captions from explicit
-decided text, checks proposed source semantics, and checks actual output through
+`webvtt-captions/1`. It extracts captured source and existing translations, builds captions from
+explicit decided text, independently checks proposed semantics and actual output through
 the same public SDK component facade and process Host. It has no third-party
 runtime dependencies or installation
 scripts. Its format operations do not read files, write files or access a project.
@@ -24,7 +24,8 @@ Supported settings are `line`, `position`, `size`, `align` and declared `region`
 Unknown/duplicate settings, `vertical`, anonymous cues, markup/entities, NUL,
 empty payloads, blank-line payload splitting and structural arrows are rejected.
 STYLE content is retained without CSS execution or visual rendering claims.
-Translation-file import is unavailable in this profile.
+Existing translated captions use the same bounded syntax through a separately
+declared translation-import capability; source and build interpretation is unchanged.
 
 The limits remain 128 KiB per source/built artifact, 2000 cues and 16 KiB per
 source/target payload. Only payload ranges change during building. The checker
@@ -47,7 +48,7 @@ verified `.cache/sdk/` artifact, never another source checkout. Common SDK types
 are erased development references. Source context encoding is a runtime import
 from the exact pinned SDK helper, staged by `prepare-sdk.py` for source-tree tests
 and copied from the verified archive into the candidate package. The public
-packager also materializes the SDK-generated standalone extraction, source-check, build and artifact-check
+packager also materializes the SDK-generated standalone extraction, source-check, translation, build and artifact-check
 validators and their license from the same verified artifact, recording its lock.
 This is a derived SDK dependency, not a hand-edited protocol copy. The component uses JSON.parse:
 it does not prove duplicate-key rejection or equivalence to strict Rust SDK
@@ -83,7 +84,8 @@ acceptance even though the check completed.
 
 `components/component.mjs` exports the SDK `activate(api)` facade. It registers
 exactly one selected contribution: `extract-source`, `source-semantic-check`,
-`build`, `validate-artifact` or `review-check`.
+`import-translations`, `translation-semantic-check`, `build`, `validate-artifact`
+or `review-check`.
 The Host owns transport, identities, cancellation, deadlines and cleanup. The
 application independently approves package/runtime bytes, installs and loads
 them, chooses the exact contribution/profile, and supplies current execution
@@ -102,6 +104,25 @@ system APIs under its user account; facade restrictions are not a security sandb
 claim. Desktop selection, project adoption, full domain cutover and distribution
 have their own integration requirements. No fallback to an embedded parser is
 provided by this package.
+
+## Existing translated captions
+
+The Resource `translation-profile` declares one captured file from
+`translations/<canonical-locale>.vtt`, such as `translations/zh.vtt`. The user
+confirms an existing project target locale with the same base language; the
+filename remains separate language evidence and never creates a project locale.
+The same 128 KiB/file, 2000-cue and 16 KiB/payload limits apply. A valid empty
+WebVTT file yields zero entries; source import still requires at least one cue.
+
+The extractor preserves the complete original file and payload/ID UTF-8 ranges.
+Entry text uses LF, without Unicode normalization. Matching uses explicit cue IDs
+with ASCII case folding in the original `webvtt:source` namespace and `webvtt-cue/1`
+policy. The independent mandatory `webvtt.translation-semantics/1` checker
+reparses the captured file and rejects altered, missing or extra evidence. Import
+does not match by text, line order or timing, and never updates the source timeline.
+Core separately reports missing/unmatched/conflicting entries and requires an
+explicit per-entry candidate or selection decision. Import grants no human
+approval, QA qualification, execution permission or release eligibility.
 
 ## Domain review checks
 

@@ -7,8 +7,8 @@ Plugins do not depend on Core, the desktop frontend or a private workspace.
 
 The repository provides a pinned SDK source artifact, an independent Rust consumer
 check, and independent WebVTT and SMAPI JavaScript candidates for source extraction,
-separate source semantics, locale building and separate artifact checking. SMAPI
-translation extraction and independent whole-file checking use the same public
+separate source semantics, locale building and separate artifact checking. Both
+translation extractors and independent whole-file checkers use the same public
 SDK. Both candidates also provide mandatory review-rule Resources and separate
 selected-text QA components. Project language confirmation, matching/adoption and full domain cutover
 remain application integration work.

@@ -302,6 +302,115 @@
         },
         "path": "profiles/review.json"
       }
+    },
+    {
+      "id": "import-translations",
+      "componentId": "caption-worker",
+      "contribution": {
+        "kind": "capability",
+        "declaration": {
+          "contract": {
+            "id": "webvtt.translation-extract",
+            "schemaVersion": 1,
+            "behaviorVersion": 1
+          },
+          "inputSchema": {
+            "id": "tsumugi.translation-extraction-input",
+            "schemaVersion": 1,
+            "behaviorVersion": 1
+          },
+          "outputSchema": {
+            "id": "tsumugi.translation-exchange",
+            "schemaVersion": 1,
+            "behaviorVersion": 1
+          },
+          "errorSchema": {
+            "id": "tsumugi.source-extraction-error",
+            "schemaVersion": 1,
+            "behaviorVersion": 1
+          },
+          "profiles": [
+            {
+              "id": "webvtt-captions",
+              "schemaVersion": 1,
+              "behaviorVersion": 1
+            }
+          ],
+          "effect": "proposal",
+          "permissions": [
+            {
+              "kind": "captured-input"
+            }
+          ],
+          "limits": {
+            "maxInputBytes": 2097152,
+            "maxOutputBytes": 4194304,
+            "concurrency": 1,
+            "timeoutMs": 30000
+          }
+        }
+      }
+    },
+    {
+      "id": "translation-semantic-check",
+      "componentId": "caption-worker",
+      "contribution": {
+        "kind": "capability",
+        "declaration": {
+          "contract": {
+            "id": "webvtt.translation-check",
+            "schemaVersion": 1,
+            "behaviorVersion": 1
+          },
+          "inputSchema": {
+            "id": "tsumugi.translation-extraction-check-input",
+            "schemaVersion": 1,
+            "behaviorVersion": 1
+          },
+          "outputSchema": {
+            "id": "tsumugi.check-results",
+            "schemaVersion": 1,
+            "behaviorVersion": 1
+          },
+          "errorSchema": {
+            "id": "tsumugi.source-extraction-error",
+            "schemaVersion": 1,
+            "behaviorVersion": 1
+          },
+          "profiles": [
+            {
+              "id": "webvtt-captions",
+              "schemaVersion": 1,
+              "behaviorVersion": 1
+            }
+          ],
+          "effect": "read-only",
+          "permissions": [
+            {
+              "kind": "captured-input"
+            }
+          ],
+          "limits": {
+            "maxInputBytes": 4194304,
+            "maxOutputBytes": 2097152,
+            "concurrency": 1,
+            "timeoutMs": 30000
+          }
+        }
+      }
+    },
+    {
+      "id": "translation-profile",
+      "componentId": "caption-worker",
+      "contribution": {
+        "kind": "resource",
+        "schema": {
+          "id": "tsumugi.translation-import-declaration",
+          "schemaVersion": 1,
+          "behaviorVersion": 1
+        },
+        "path": "profiles/translation-import.json"
+      }
     }
   ]
 }

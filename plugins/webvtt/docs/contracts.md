@@ -15,6 +15,8 @@ execution or adoption.
 | --- | --- | --- | --- | --- |
 | `extract-source` | `webvtt.extract/1` | `tsumugi.source-extraction-input/1` | `tsumugi.content-exchange/2:1` | `tsumugi.source-extraction-error/1` |
 | `source-semantic-check` | `webvtt.source-check/1` | `tsumugi.source-extraction-check-input/1` | `tsumugi.check-results/1` | `tsumugi.source-extraction-error/1` |
+| `import-translations` | `webvtt.translation-extract/1` | `tsumugi.translation-extraction-input/1` | `tsumugi.translation-exchange/1` | `tsumugi.source-extraction-error/1` |
+| `translation-semantic-check` | `webvtt.translation-check/1` | `tsumugi.translation-extraction-check-input/1` | `tsumugi.check-results/1` | `tsumugi.source-extraction-error/1` |
 | `build` | `webvtt.locale-build/1` | `tsumugi.build-input/1` | `tsumugi.artifact-set/1` | `tsumugi.build-error/1` |
 | `validate-artifact` | `webvtt.artifact-check/1` | `tsumugi.artifact-check-input/1` | `tsumugi.check-results/1` | `tsumugi.build-error/1` |
 
@@ -117,6 +119,48 @@ captured source remains bounded by 2 MiB and the complete proposal by the
 4 MiB. A near-limit
 extraction result may not fit when combined with source. Oversized checks are
 explicitly refused without truncation or partial coverage.
+
+## Existing translation extraction and independent checking
+
+The immutable [translation Resource](../profiles/translation-import.json) uses
+SDK `TranslationImportDeclaration/1` with the unchanged `webvtt-captions/1`
+profile. It declares one `translation` artifact in `translations/`, extension
+`vtt`, at most 128 KiB. The SDK owns the input, exchange and check shapes; generated
+validators come from the same selected immutable SDK archive.
+
+Input fixes import/source-set/source-snapshot IDs, the existing project target
+language and `user-confirmed` language evidence. The filename stem must be a
+canonical BCP 47 locale interpreted by the selected Node ICU runtime, with the
+same base language as the separately confirmed target. Source matching scope is
+exactly namespace `webvtt:source`, policy `webvtt-cue/1`. No source text or timeline
+is inferred from a translation file. Unsupported syntax retains the original
+caption parser's rejection behavior; only this import accepts a valid zero-cue
+file as a complete empty proposal.
+
+Each entry contains operation-local identity, LF-normalized text, the original
+payload UTF-8 range and original literal cue ID display/range. The canonical cue
+identity applies ASCII case folding; distinct IDs with equal text remain distinct.
+The complete original artifact preserves BOM, newline, notes, layout and timing.
+These are imported evidence, never changes to the source. Core owns current
+source matching, missing/unmatched/conflict reports, per-entry adoption, selection
+and history. A proposal and its check do not create human approval or current QA.
+
+The independent checker reparses the captured file without calling the extractor.
+It requires exactly one mandatory nonwaivable `webvtt.translation-semantics/1`
+requirement targeting `input.importId`, with the selected `caption-worker` /
+`translation-semantic-check` provider and actual package identity. It verifies
+unchanged scope, declared/target languages, complete artifact bytes, all entries,
+order, texts, native identities and original ranges. Operation-local IDs and entry
+array order may vary while the explicit complete cue order remains faithful.
+A mismatch returns a completed SDK result containing blocking
+`translation-mismatch`; invalid input/requirements return the finite SDK extraction
+error. The Host separately binds actual provider/channel evidence and Core
+requires the independently saved proof before projection or adoption.
+
+Extraction input is bounded by 2 MiB, exchange by 4 MiB, combined check input by
+4 MiB and check output by 2 MiB. The file, cue count and original payload-byte
+limits remain 128 KiB, 2000 and 16 KiB. Oversized inputs are refused, never
+truncated. Source, build and review capabilities keep their original interpretation.
 
 ## Building
 

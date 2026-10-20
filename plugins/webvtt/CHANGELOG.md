@@ -7,6 +7,11 @@ This project follows Semantic Versioning. The first package is experimental.
 
 ### Added
 
+- Import existing translated WebVTT captions from an explicitly confirmed language
+  file, retaining original bytes and cue identity. Independent mandatory checking
+  precedes Core per-entry candidate/selection adoption; source timing and human
+  approval remain unchanged. The original caption syntax and limits still apply.
+
 - Each cue now carries an extracted source-context time fact with its original
   UTF-8 range. The independent source checker rejects missing or forged facts;
   speaker, role and scene remain absent in the plain-text caption profile.

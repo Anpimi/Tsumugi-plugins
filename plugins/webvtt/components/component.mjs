@@ -3,7 +3,10 @@ import validateBuildInput from '../sdk/validate-build-input.mjs';
 import validateArtifactCheckInput from '../sdk/validate-artifact-check-input.mjs';
 import validateSourceExtractionInput from '../sdk/validate-source-extraction-input.mjs';
 import validateSourceExtractionCheckInput from '../sdk/validate-source-extraction-check-input.mjs';
-import { WebvttError, MAX_PAYLOAD_BYTES, MAX_CONTENT_BYTES, MAX_SOURCE_CHECK_BYTES, extractSource, checkSourceSemantics, buildCaptions, checkArtifact, checkReview, encoded } from './webvtt.mjs';
+import validateTranslationExtractionInput from '../sdk/validate-translation-extraction-input.mjs';
+import validateTranslationExtractionCheckInput from '../sdk/validate-translation-extraction-check-input.mjs';
+import validateTranslationExchange from '../sdk/validate-translation-exchange.mjs';
+import { WebvttError, MAX_PAYLOAD_BYTES, MAX_CONTENT_BYTES, MAX_SOURCE_CHECK_BYTES, extractSource, checkSourceSemantics, extractTranslations, checkTranslationSemantics, buildCaptions, checkArtifact, checkReview, encoded } from './webvtt.mjs';
 
 /** @typedef {import('../../../.cache/sdk/tsumugi-plugin-sdk-0.1.0-alpha.1/javascript/component.js').ComponentModule} ComponentModule */
 /** @typedef {import('../../../.cache/sdk/tsumugi-plugin-sdk-0.1.0-alpha.1/javascript/content.js').SourceExtractionError} SourceExtractionError */
@@ -15,6 +18,8 @@ const operations = new Map([
   ['review-check', { contract: 'webvtt.review-check', input: 'tsumugi.review-check-input', handler: checkReview }],
   ['extract-source', { contract: 'webvtt.extract', input: 'tsumugi.source-extraction-input', handler: extractSource }],
   ['source-semantic-check', { contract: 'webvtt.source-check', input: 'tsumugi.source-extraction-check-input', handler: checkSourceSemantics }],
+  ['import-translations', { contract: 'webvtt.translation-extract', input: 'tsumugi.translation-extraction-input', handler: extractTranslations }],
+  ['translation-semantic-check', { contract: 'webvtt.translation-check', input: 'tsumugi.translation-extraction-check-input', handler: checkTranslationSemantics }],
   ['build', { contract: 'webvtt.locale-build', input: 'tsumugi.build-input', handler: buildCaptions }],
   ['validate-artifact', { contract: 'webvtt.artifact-check', input: 'tsumugi.artifact-check-input', handler: checkArtifact }],
 ]);
@@ -38,7 +43,7 @@ const component = {
             || typeof payload.utf8 !== 'string' || !payload.utf8.isWellFormed()) {
             throw new WebvttError('invalid-input', 'Captured invocation schema or profile mismatch.');
           }
-          const inputLimit = id === 'extract-source' ? MAX_PAYLOAD_BYTES : MAX_SOURCE_CHECK_BYTES;
+          const inputLimit = id === 'extract-source' || id === 'import-translations' ? MAX_PAYLOAD_BYTES : MAX_SOURCE_CHECK_BYTES;
           if (Buffer.byteLength(payload.utf8) > inputLimit) throw new WebvttError('limit-exceeded', 'Encoded operation input exceeds its captured byte limit.');
           try { input = JSON.parse(payload.utf8); }
           catch { throw new WebvttError('invalid-input', 'Invalid operation JSON.'); }
@@ -48,6 +53,10 @@ const component = {
           if (id === 'source-semantic-check' && !validateSourceExtractionCheckInput(input)) {
             throw new WebvttError('invalid-input', 'Operation input does not match the SDK schema.');
           }
+          if ((id === 'import-translations' && !validateTranslationExtractionInput(input))
+            || (id === 'translation-semantic-check' && !validateTranslationExtractionCheckInput(input))) {
+            throw new WebvttError('invalid-input', 'Operation input does not match the SDK schema.');
+          }
           if ((id === 'build' && !validateBuildInput(input)) || (id === 'validate-artifact' && !validateArtifactCheckInput(input))) {
             throw new WebvttError('invalid-input', 'Operation input does not match the SDK schema.');
           }
@@ -55,8 +64,11 @@ const component = {
             throw new WebvttError('invalid-input', 'Review input does not match the SDK schema.');
           }
           const output = operation.handler(input, metadata.signal);
+          if (id === 'import-translations' && !validateTranslationExchange(output)) {
+            throw new Error('Translation handler result violates the SDK structure.');
+          }
           if (metadata.signal.aborted || api.signal.aborted) throw new WebvttError('cancelled', 'Operation cancelled.');
-          return { kind: 'succeeded', utf8: encoded(output, id === 'extract-source' ? MAX_CONTENT_BYTES : MAX_PAYLOAD_BYTES) };
+          return { kind: 'succeeded', utf8: encoded(output, id === 'extract-source' || id === 'import-translations' ? MAX_CONTENT_BYTES : MAX_PAYLOAD_BYTES) };
         } catch (error) {
           if (!(error instanceof WebvttError)) throw error;
           if (id === 'review-check') {
@@ -66,8 +78,9 @@ const component = {
             return { kind: 'failed', utf8: encoded({ code: supported.has(code) ? code : 'invalid-input',
               unitId: typeof unit === 'string' && /^[A-Za-z0-9._:/-]{1,128}$/.test(unit) ? unit : null, detail: error.detail }) };
           }
-          if (id === 'extract-source' || id === 'source-semantic-check') {
-            const artifactId = (id === 'extract-source' ? input : input?.source)?.artifacts?.[0]?.id;
+          if (id === 'extract-source' || id === 'source-semantic-check' || id === 'import-translations' || id === 'translation-semantic-check') {
+            const captured = id === 'source-semantic-check' ? input?.source : id === 'translation-semantic-check' ? input?.input : input;
+            const artifactId = captured?.artifacts?.[0]?.id;
             /** @type {SourceExtractionError} */
             const result = {
               code: extractionCodes.has(error.code) ? error.code : 'invalid-input',
