@@ -72,7 +72,10 @@ Worker and grants no installation or execution permission.
 
 The [candidate workflow](.github/workflows/candidate-build.yml) is configured for
 Ubuntu 24.04 and macOS 14 with exact build-tool versions and full-commit-pinned
-Actions. Every change checks all four packages, including changes to shared
+Actions. A separate Ubuntu job builds every Rust workspace target and feature
+with the declared minimum Rust 1.98.0, using only the tracked SDK artifact. It
+checks compilation without rerunning Node suites or producing candidate archives.
+The Rust 1.99.0 jobs still check all four packages, including changes to shared
 tooling or SDK selection. PR runs use `contents: read`, retain no checkout
 credentials, receive no publication secrets, and have no privileged follow-up
 or release job. Uploaded archives and records are untrusted development

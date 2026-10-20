@@ -383,7 +383,7 @@ class CandidateBuildTests(unittest.TestCase):
         for forbidden in ("pull_request_target", "secrets.", "write-all", "contents: write", "id-token: write", "workflow_run", "self-hosted", "cargo publish", "npm publish"):
             self.assertNotIn(forbidden, workflow)
         actions = re.findall(r"uses:\s*(\S+)", workflow)
-        self.assertEqual(len(actions), 4)
+        self.assertEqual(len(actions), 6)
         self.assertTrue(all(re.fullmatch(r"actions/[a-z-]+@[a-f0-9]{40}", action) for action in actions))
         self.assertNotIn("cargo-target", workflow)
         self.assertNotIn("include-hidden-files", workflow)

@@ -47,7 +47,9 @@ tar SHA-256 是传输摘要，不冒充 Host 的 `packageDigest`。默认
 Worker，不授予安装或执行权限。
 
 [候选 workflow](.github/workflows/candidate-build.yml) 配置 Ubuntu 24.04/macOS 14、
-准确工具版本及完整 SHA 固定的 Actions。每次变更检查四包及共享工具。
+准确工具版本及完整 SHA 固定的 Actions。另有 Ubuntu 作业使用声明的最低
+Rust 1.98.0，仅消费 tracked SDK 产物，构建 Rust workspace 的全部 target 和 feature；
+该作业只检查编译，不重复 Node 测试或生成候选归档。原 Rust 1.99.0 作业仍检查四包及共享工具。
 PR 只有 `contents: read`，checkout 不保留凭据，无发布密钥、特权后续作业
 或发布操作。上传结果是未发布、未信任的开发候选，不能直接提升为发行物。
 本配置说明不宣称实际 hosted run 已通过。
