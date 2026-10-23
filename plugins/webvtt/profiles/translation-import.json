@@ -1,0 +1,23 @@
+{
+  "displayName": "Existing WebVTT translations",
+  "profile": {
+    "id": "webvtt-captions",
+    "schemaVersion": 1,
+    "behaviorVersion": 1
+  },
+  "material": {
+    "logicalDirectory": "translations",
+    "extension": "vtt",
+    "role": "translation",
+    "maxBytes": 131072
+  },
+  "extractor": "import-translations",
+  "checker": "translation-semantic-check",
+  "semanticRules": [
+    {
+      "id": "webvtt.translation-semantics",
+      "schemaVersion": 1,
+      "behaviorVersion": 1
+    }
+  ]
+}

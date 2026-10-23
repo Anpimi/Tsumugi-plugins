@@ -1,0 +1,47 @@
+[
+  {
+    "name": "anonymous cue",
+    "code": "unsupported-structure",
+    "utf8": "WEBVTT\n\n00:00.000 --> 00:01.000\nText\n"
+  },
+  {
+    "name": "case-folded duplicate IDs",
+    "code": "unsupported-structure",
+    "utf8": "WEBVTT\n\nCue\n00:00.000 --> 00:01.000\nA\n\nCUE\n00:01.000 --> 00:02.000\nB\n"
+  },
+  {
+    "name": "non-ASCII identifier",
+    "code": "unsupported-structure",
+    "utf8": "WEBVTT\n\n字幕\n00:00.000 --> 00:01.000\nText\n"
+  },
+  {
+    "name": "invalid minute",
+    "code": "invalid-source",
+    "utf8": "WEBVTT\n\nCue\n00:60.000 --> 01:01.000\nText\n"
+  },
+  {
+    "name": "Unicode timing whitespace",
+    "code": "invalid-source",
+    "utf8": "WEBVTT\n\nCue\n00:00.000 --> 00:01.000\nText\n"
+  },
+  {
+    "name": "payload markup",
+    "code": "unsupported-structure",
+    "utf8": "WEBVTT\n\nCue\n00:00.000 --> 00:01.000\n<b>Text</b>\n"
+  },
+  {
+    "name": "missing declared region",
+    "code": "unsupported-structure",
+    "utf8": "WEBVTT\n\nCue\n00:00.000 --> 00:01.000 region:missing\nText\n"
+  },
+  {
+    "name": "NOTE structural arrow",
+    "code": "unsupported-structure",
+    "utf8": "WEBVTT\n\nNOTE --> invalid\n\nCue\n00:00.000 --> 00:01.000\nText\n"
+  },
+  {
+    "name": "layout after first cue",
+    "code": "unsupported-structure",
+    "utf8": "WEBVTT\n\nCue\n00:00.000 --> 00:01.000\nText\n\nSTYLE\n::cue { color: red; }\n"
+  }
+]

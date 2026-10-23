@@ -1,5 +1,12 @@
 .cache/
+node_modules/
+.generated/
+plugins/webvtt/sdk/
+plugins/stardew-smapi/sdk/
 target/
 .worktrees/
 .DS_Store
 *.log
+__pycache__/
+*.pyc
+/artifacts/candidates/

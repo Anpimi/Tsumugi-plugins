@@ -1,0 +1,34 @@
+{
+  "id": "org.tsumugi.examples.philosophy-terminology",
+  "revision": "editorial-1",
+  "sourceLanguage": "en",
+  "authority": "unadopted-editorial-suggestion",
+  "license": "MIT",
+  "coverage": "This example defines its own editorial preferences for logic prose. It is not an authoritative philosophical dictionary. Explicit concept selection and human review are required.",
+  "concepts": [
+    {
+      "id": "validity",
+      "sourceForms": ["validity", "valid"],
+      "note": "Use this entry when discussing an argument's validity; do not infer the intended sense from the spelling alone.",
+      "targets": { "zh-CN": "有效性", "ja": "妥当性" }
+    },
+    {
+      "id": "soundness",
+      "sourceForms": ["soundness", "sound"],
+      "note": "Use this entry for the selected logic sense of soundness, not sound as audio or a condition of health.",
+      "targets": { "zh-CN": "可靠性", "ja": "健全性" }
+    },
+    {
+      "id": "premise",
+      "sourceForms": ["premise", "premises"],
+      "note": "This project's preferred term applies to the selected argument context.",
+      "targets": { "zh-CN": "前提", "ja": "前提" }
+    },
+    {
+      "id": "inference",
+      "sourceForms": ["inference", "infer"],
+      "note": "Use the preferred term only within the explicitly selected reasoning context.",
+      "targets": { "zh-CN": "推理", "ja": "推論" }
+    }
+  ]
+}

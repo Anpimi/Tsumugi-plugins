@@ -1,0 +1,18 @@
+[package]
+name = "tsumugi-flat-json-example"
+version = "0.1.0-alpha.1"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+publish = false
+
+[dependencies]
+tsumugi-plugin-sdk = { path = "../../.cache/sdk/tsumugi-plugin-sdk-0.1.0-alpha.1", version = "=0.1.0-alpha.1", features = ["native-worker"] }
+serde = { version = "=1.0.229", features = ["derive"] }
+serde_json = { version = "=1.0.151", features = ["raw_value"] }
+sha2 = "=0.10.9"
+
+[[bin]]
+name = "flat-json-worker"
+path = "src/main.rs"
