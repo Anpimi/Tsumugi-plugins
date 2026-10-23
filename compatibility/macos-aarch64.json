@@ -1,0 +1,46 @@
+{
+  "formatVersion": 1,
+  "scope": "experimental-two-domain-core-adoption-v1",
+  "host": {
+    "repository": "https://github.com/Anpimi/Tsumugi",
+    "commit": "e0d223f9bcbbca9decad63d62a90aed8510f9cf0",
+    "minimumIsCurrent": true
+  },
+  "platform": {
+    "operatingSystem": "macos",
+    "architecture": "aarch64"
+  },
+  "sdkArtifactSha256": "bc5e8f533ebedd770a41fa25cf4a557cd6a7bab03f930d7a8e40f66e957e5409",
+  "runtime": {
+    "protocolVersion": 1,
+    "platform": {
+      "operatingSystem": "macos",
+      "architecture": "aarch64"
+    },
+    "sdkVersion": "0.1.0-alpha.1",
+    "processProtocol": 3,
+    "profile": "node-system-libraries-v1",
+    "toolVersion": "26.10.0",
+    "tool": {
+      "treeDigest": "881b1f2ceda958a4e0dc80a92d6b89b3c5f90f6b573787526f327622f39d323d",
+      "entrypoint": "bin/node"
+    },
+    "host": {
+      "treeDigest": "3d50091196e8336290bd6136f4825dc2932ec5bdd48ea2d71058b94449334eaf",
+      "entrypoint": "dist/main.js"
+    }
+  },
+  "candidate": {
+    "repository": "Anpimi/Tsumugi-plugins",
+    "runId": 39960221807,
+    "headCommit": "10c22d2807ab6466c1c3d4c0b9e04aff89c1815c",
+    "buildCommit": "d0e8c826ef099cceeab059c7aed5370034296c54",
+    "artifact": "plugin-candidates-macos-14",
+    "archives": {
+      "webvtt": "efc3200e31d2339100d6297b4827792713c3b6123967e42ee14da0ab65d6135d",
+      "stardew-smapi": "68ad88b4fd1f475d3c1a2e40e3c7e146c5a6980a9dc7cf87028a8e209e26c1c5"
+    }
+  },
+  "releasedBaseline": "not-selected",
+  "supportStatement": "Only this exact experimental Host endpoint and macOS arm64 runtime are selected. This is not an application release, a broader compatibility interval or automatic package installation approval."
+}

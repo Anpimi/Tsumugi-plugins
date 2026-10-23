@@ -10,6 +10,32 @@ See the [English repository README](../README.md) and
 [Chinese repository README](../README.zh-CN.md) for candidate-build and SDK
 context.
 
+## Declared experimental Mac endpoint
+
+[`compatibility/macos-aarch64.json`](../compatibility/macos-aarch64.json) selects
+one exact public Host commit and an approved macOS arm64 runtime. Minimum and
+current are the same experimental endpoint; no wider Host interval, application
+release, or other platform is promised. The selection also pins an actual
+successful hosted build, its PR head and distinct merge checkout, complete SDK
+artifact digest and the two candidate transport digests.
+
+The PR workflow retrieves those fixed development archives with a read-only
+Actions token limited to the retrieval step, checks out the exact public Host,
+builds its JavaScript deployment, and uses its original Node/runtime preparer.
+The prepared descriptor must equal the selection before package execution.
+`prepare-compatibility.py` admits the same captured tar bytes through the actual
+Host archive inspector and original package writer, then supplies explicit paired
+and declared-Host rows to the existing matrix runner. Both rows run the actual
+two-domain journeys; repeated journeys across categories are not distinct new
+test cases. It never substitutes the current checkout for the declared source.
+
+The scoped PR job requires those two rows to pass and the released-plugin row
+to remain explicitly `not-run`. Its summary states that the complete matrix is
+still `incomplete` (exit 2). The separate manual workflow continues to require
+the full matrix; this scoped job cannot certify a released baseline or authorize
+publication. Runtime caches, source checkouts and executables are not uploaded
+with its report artifacts. No signing or publishing credentials are supplied.
+
 ## Run a local matrix
 
 Create a reviewed `formatVersion: 1` matrix JSON, then run from the repository
