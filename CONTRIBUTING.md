@@ -1,7 +1,7 @@
 # Contributing
 
 For the end-to-end development sequence, use Tsumugi's public
-[plugin authoring walkthrough](https://github.com/Anpimi/Tsumugi/blob/main/docs/plugin-authoring.md)
+[plugin authoring walkthrough](https://github.com/Anpimi/Tsumugi/blob/e0d223f9bcbbca9decad63d62a90aed8510f9cf0/docs/plugin-authoring.md)
 with a matching experimental Host/SDK snapshot. This repository's
 [SDK preparation](README.md#build-the-independent-sdk-consumer),
 [Rust example](examples/flat-json/README.md#build-and-package) and
@@ -27,7 +27,7 @@ consuming application's current trust and permission checks for those exact
 package bytes. A Registry or Market listing is not approval to install or
 execute a package.
 For publication through a signed offline repository, use the matching Host
-snapshot's [signed repository flow](https://github.com/Anpimi/Tsumugi/blob/main/crates/plugin-host/README.md#signed-offline-repositories);
+snapshot's [signed repository flow](https://github.com/Anpimi/Tsumugi/blob/e0d223f9bcbbca9decad63d62a90aed8510f9cf0/crates/plugin-host/README.md#signed-offline-repositories);
 this source-build workflow and package discovery do not replace that flow.
 
 Keep domain behavior and tests in the owning plugin directory. Preserve the

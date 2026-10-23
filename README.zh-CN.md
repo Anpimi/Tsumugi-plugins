@@ -1,10 +1,15 @@
 # Tsumugi 插件候选构建
 
-[插件开发指南（英文）](https://github.com/Anpimi/Tsumugi/blob/main/docs/plugin-authoring.md)
+[插件开发指南（英文）](https://github.com/Anpimi/Tsumugi/blob/e0d223f9bcbbca9decad63d62a90aed8510f9cf0/docs/plugin-authoring.md)
 串联固定 SDK、独立样例打包、匹配 Host 的检查器、人工加载与诊断；各环节需使用同一实验协议快照。
 
 本页说明独立候选构建及其证据边界。完整仓库、领域包与 SDK 用法以
 [英文 README](README.md) 和各包公开文档为准。
+
+[WebVTT 0.1.0-alpha.1](https://github.com/Anpimi/Tsumugi-plugins/releases/tag/webvtt/v0.1.0-alpha.1)
+与 [SMAPI 0.1.0-alpha.1](https://github.com/Anpimi/Tsumugi-plugins/releases/tag/stardew-smapi/v0.1.0-alpha.1)
+已有未签名实验归档，仅支持[兼容策略](compatibility/macos-aarch64.json)中准确的
+macOS aarch64 Host，minimum=current。源码构建仍产开发候选，不会发布或安装这些版本。
 
 在 Unix 环境准备 Rust 1.98 或更新版本、Python 3.11 或更新版本、
 Node `>=26.10.0 <27` 与 pnpm 12.8.1，从本仓运行：

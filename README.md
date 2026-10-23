@@ -14,7 +14,12 @@ selected-text QA components. Project language confirmation, matching/adoption an
 remain application integration work.
 Their source-import Resources use schema/behavior 2/2 and select exact immutable
 Review Resources; source/profile rules and checker bindings come from the same
-SDK-pinned package. These packages are experimental candidates; no plugin release is claimed.
+SDK-pinned package. [WebVTT 0.1.0-alpha.1](https://github.com/Anpimi/Tsumugi-plugins/releases/tag/webvtt/v0.1.0-alpha.1)
+and [SMAPI 0.1.0-alpha.1](https://github.com/Anpimi/Tsumugi-plugins/releases/tag/stardew-smapi/v0.1.0-alpha.1)
+are available as unsigned experimental archives for the exact macOS aarch64 Host
+in the [compatibility policy](compatibility/macos-aarch64.json), with minimum =
+current. Source builds remain development candidates and do not publish or
+install those releases.
 
 ## Build and check all independent candidates
 
@@ -106,7 +111,7 @@ unsigned archives do not establish TUF trust or select bundled plugins.
 
 ## Build the independent SDK consumer
 
-The public [plugin authoring walkthrough](https://github.com/Anpimi/Tsumugi/blob/main/docs/plugin-authoring.md)
+The public [plugin authoring walkthrough](https://github.com/Anpimi/Tsumugi/blob/e0d223f9bcbbca9decad63d62a90aed8510f9cf0/docs/plugin-authoring.md)
 connects these producer commands to the matching Host inspector, explicit manual
 loading and diagnostics. Use the same experimental protocol snapshot throughout.
 
