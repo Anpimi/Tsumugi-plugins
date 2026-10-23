@@ -39,7 +39,10 @@ the packaging tests, Rust workspace/public consumer checks and all three Node
 domain suites, and builds four independently versioned candidates: WebVTT,
 SMAPI, philosophy and the Native Rust JSON example. Parser preparation is
 explicit; pnpm installation disables lifecycle scripts and copies dependency
-files so the bounded packager never reads hard links into a shared store. The entry never fetches
+files so the bounded packager never reads hard links into a shared store.
+Cargo installs the Rust example binary under the new output directory before
+packaging; it does not install a tool globally or package linked build-cache files.
+The entry never fetches
 the SDK's producer commit, which is provenance rather than a required publicly
 available source checkout. It does not publish or sign anything.
 

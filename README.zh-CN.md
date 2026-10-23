@@ -23,6 +23,8 @@ workspace/公开消费端、Python 打包工具和三组 Node 领域测试，并
 WebVTT、SMAPI、哲学知识样例及独立 Rust JSON 样例。四包保留各自的版本。
 pnpm 安装禁用 lifecycle scripts，并复制依赖文件，避免有界打包器读取共享缓存中的硬链接；
 parser 由已有工具显式准备。
+Rust 样例先由 Cargo 安装到本次新输出目录，再交给打包器；不会全局安装工具，
+也不会打包指向构建缓存的硬链接。
 SDK 直接取自 `sdk.lock.json` 固定的仓内 tracked archive，不要求获取其
 生产源 commit，也不需要私有文档、兄弟 Core checkout 或桌面应用。
 

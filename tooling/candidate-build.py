@@ -329,8 +329,11 @@ def build(root, output, runner, report, offline=False, inspector=None):
         name = Path(relative).name
         runner.run(f"{name}-tests", node_tests(root, relative), tests="node")
         runner.run(f"{name}-package", [sys.executable, "tooling/package-plugin.py", relative, str(output / "packages" / name)])
-    runner.run("flat-json-build", [*cargo, "build", *locked, "-p", "tsumugi-flat-json-example", "--bin", "flat-json-worker"])
-    worker = output / "cargo-target/debug/flat-json-worker"
+    # Cargo's build output can be hard-linked to deps on Linux. Its isolated
+    # install step supplies an ordinary file without weakening package capture.
+    worker_root = output / "native-worker"
+    runner.run("flat-json-build", [*cargo, "install", *locked, "--path", "examples/flat-json", "--bin", "flat-json-worker", "--debug", "--no-track", "--root", str(worker_root)])
+    worker = worker_root / "bin/flat-json-worker"
     metadata = output / "flat-json-metadata.json"
     runner.run("flat-json-metadata", [str(worker), "--metadata"], stdout=metadata)
     runner.run("flat-json-package", [sys.executable, "tooling/package-flat-json.py", str(metadata), str(worker), str(output / "packages/flat-json")])
