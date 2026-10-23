@@ -1,0 +1,26 @@
+{
+  "profile": {
+    "id": "webvtt-captions",
+    "schemaVersion": 1,
+    "behaviorVersion": 1
+  },
+  "checker": "review-check",
+  "rules": [
+    {
+      "rule": {
+        "id": "webvtt.source-structure",
+        "schemaVersion": 1,
+        "behaviorVersion": 1
+      },
+      "requiresTranslation": false
+    },
+    {
+      "rule": {
+        "id": "webvtt.payload",
+        "schemaVersion": 1,
+        "behaviorVersion": 1
+      },
+      "requiresTranslation": true
+    }
+  ]
+}

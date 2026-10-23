@@ -1,0 +1,11 @@
+{
+  "name": "@tsumugi/example-philosophy",
+  "version": "0.1.0-alpha.1",
+  "type": "module",
+  "license": "MIT",
+  "engines": { "node": ">=26.10.0 <27" },
+  "scripts": {
+    "prepare": "node tooling/prepare.mjs",
+    "test": "node --test tests/*.test.mjs"
+  }
+}

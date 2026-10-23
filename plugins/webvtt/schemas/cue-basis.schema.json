@@ -1,0 +1,51 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:tsumugi:webvtt:cue-basis:1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "version",
+    "policy",
+    "nativeId",
+    "timing",
+    "settings",
+    "layoutDigest"
+  ],
+  "properties": {
+    "version": {
+      "type": "integer",
+      "const": 1
+    },
+    "policy": {
+      "type": "string",
+      "const": "webvtt-cue/1"
+    },
+    "nativeId": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 1024,
+      "pattern": "^[ -~]+$"
+    },
+    "timing": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 131072
+    },
+    "settings": {
+      "type": "array",
+      "maxItems": 5,
+      "items": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 131072
+      }
+    },
+    "layoutDigest": {
+      "type": "string",
+      "minLength": 64,
+      "maxLength": 64,
+      "pattern": "^[0-9a-f]{64}$"
+    }
+  },
+  "description": "Required per-occurrence source evidence. The profile preserves its exact canonical JSON bytes: properties in version, policy, nativeId, timing, settings, layoutDigest order, with JSON.stringify formatting and no extra fields."
+}

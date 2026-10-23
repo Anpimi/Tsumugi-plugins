@@ -1,0 +1,12 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:tsumugi:smapi:manifest-context-basis:1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["version", "name"],
+  "properties": {
+    "version": { "type": "integer", "const": 1 },
+    "name": { "type": "string", "minLength": 1, "maxLength": 4096 }
+  },
+  "description": "Required snapshot revision basis when the decoded manifest Name fits 4096 UTF-8 bytes. Its canonical JSON has version and name in that order and contains no source coordinate."
+}

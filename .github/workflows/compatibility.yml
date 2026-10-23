@@ -1,0 +1,155 @@
+name: Pinned Host compatibility
+
+on:
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      matrix:
+        description: 'Reviewed formatVersion 1 JSON; exact public Host commits and HTTPS artifact identities'
+        type: string
+        required: true
+      runner:
+        description: 'Hosted runner matching the approved runtime platform'
+        type: choice
+        default: macos-14
+        options: [macos-14, ubuntu-24.04]
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: compatibility-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  compatibility:
+    if: ${{ github.event_name == 'workflow_dispatch' }}
+    runs-on: ${{ inputs.runner }}
+    timeout-minutes: 120
+    env:
+      RUSTUP_TOOLCHAIN: '1.99.0'
+      CARGO_INCREMENTAL: '0'
+      CARGO_PROFILE_DEV_DEBUG: '0'
+      CARGO_PROFILE_TEST_DEBUG: '0'
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+        with:
+          python-version: '3.13.5'
+      - name: Prepare exact Rust in this disposable runner
+        run: rustup toolchain install 1.99.0 --profile minimal
+      - name: Capture the explicit matrix
+        env:
+          SELECTED_MATRIX: ${{ inputs.matrix }}
+        run: |
+          mkdir -p artifacts/compatibility
+          python3 -c 'import json, os; from pathlib import Path; value=json.loads(os.environ["SELECTED_MATRIX"]); Path("artifacts/compatibility/selection.json").write_text(json.dumps(value), encoding="utf-8")'
+      - name: Run exact prebuilt combinations through their public Host
+        run: python3 tooling/compatibility-matrix.py --matrix artifacts/compatibility/selection.json --output artifacts/compatibility/result
+      - name: Retain compatibility evidence without executable materials or caches
+        if: ${{ always() }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: host-compatibility-${{ inputs.runner }}
+          path: |
+            artifacts/compatibility/selection.json
+            artifacts/compatibility/result/compatibility-matrix.json
+            artifacts/compatibility/result/*/host-results/compatibility.json
+            artifacts/compatibility/result/*/host-results/*.log
+            artifacts/compatibility/result/*/*.log
+          if-no-files-found: error
+          retention-days: 14
+
+  declared-host:
+    name: Pinned experimental Host compatibility
+    if: ${{ github.event_name == 'pull_request' }}
+    runs-on: macos-14
+    timeout-minutes: 60
+    env:
+      RUSTUP_TOOLCHAIN: '1.99.0'
+      CARGO_INCREMENTAL: '0'
+      CARGO_PROFILE_DEV_DEBUG: '0'
+      CARGO_PROFILE_TEST_DEBUG: '0'
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+        with:
+          python-version: '3.13.5'
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: '26.10.0'
+      - name: Read the exact experimental support selection
+        id: selection
+        run: python3 tooling/prepare-compatibility.py describe --policy compatibility/macos-aarch64.json >> "$GITHUB_OUTPUT"
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          repository: Anpimi/Tsumugi
+          ref: ${{ steps.selection.outputs.host_commit }}
+          path: host-source
+          persist-credentials: false
+      - name: Retrieve the selected hosted development archives
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SELECTED_RUN: ${{ steps.selection.outputs.run_id }}
+          SELECTED_ARTIFACT: ${{ steps.selection.outputs.artifact }}
+        run: |
+          mkdir -p artifacts/compatibility
+          gh api "repos/Anpimi/Tsumugi-plugins/actions/runs/$SELECTED_RUN" > artifacts/compatibility/candidate-run.json
+          gh run download "$SELECTED_RUN" --repo Anpimi/Tsumugi-plugins --name "$SELECTED_ARTIFACT" --dir "$RUNNER_TEMP/candidate-input"
+      - name: Prepare exact build tools in the disposable runner
+        run: |
+          echo "CARGO_TARGET_DIR=$RUNNER_TEMP/compatibility-target" >> "$GITHUB_ENV"
+          rustup toolchain install 1.99.0 --profile minimal --no-self-update
+          npm install --prefix "$RUNNER_TEMP/compatibility-pnpm" --ignore-scripts --no-package-lock pnpm@12.8.1
+          node "$RUNNER_TEMP/compatibility-pnpm/node_modules/pnpm/install.js"
+          "$RUNNER_TEMP/compatibility-pnpm/node_modules/.bin/pnpm" --version
+          echo "$RUNNER_TEMP/compatibility-pnpm/node_modules/.bin" >> "$GITHUB_PATH"
+      - name: Build the exact public Host and its production JavaScript deployment
+        working-directory: host-source
+        run: |
+          pnpm install --frozen-lockfile --ignore-scripts --package-import-method=copy
+          pnpm --dir runtimes/javascript-host build
+          pnpm --filter @tsumugi/javascript-host deploy --prod --ignore-scripts "$RUNNER_TEMP/host-deploy"
+          cargo build --locked -p tsumugi-plugin-host --bin tsumugi-plugin-package --bin tsumugi-plugin-runtime
+      - name: Prepare the pinned Node and Host runtime with the original owner
+        working-directory: host-source
+        run: |
+          NODE_URL=$(python3 -c 'import json; print(json.load(open("runtimes/javascript-host/scripts/node-distribution.macos-aarch64.json"))["url"])')
+          curl --fail --location --proto '=https' --proto-redir '=https' --max-time 180 --output "$RUNNER_TEMP/node.tar.xz" "$NODE_URL"
+          node runtimes/javascript-host/scripts/prepare-desktop-runtime.mjs --node-archive "$RUNNER_TEMP/node.tar.xz" --host-source "$RUNNER_TEMP/host-deploy" --inspector "$CARGO_TARGET_DIR/debug/tsumugi-plugin-runtime" --output "$RUNNER_TEMP/prepared-runtime"
+      - name: Inspect the frozen packages and construct the explicit selection
+        run: |
+          python3 tooling/prepare-compatibility.py prepare --policy compatibility/macos-aarch64.json --host "$GITHUB_WORKSPACE/host-source" --candidates "$RUNNER_TEMP/candidate-input" --runtime "$RUNNER_TEMP/prepared-runtime" --inspector "$CARGO_TARGET_DIR/debug/tsumugi-plugin-package" --run-record artifacts/compatibility/candidate-run.json --output "$GITHUB_WORKSPACE/artifacts/compatibility/inputs"
+      - name: Exercise every selected compatibility class
+        env:
+          EXPECTED_MATRIX_EXIT: ${{ steps.selection.outputs.matrix_exit }}
+        run: |
+          matrix_exit=0
+          python3 tooling/compatibility-matrix.py --matrix artifacts/compatibility/inputs/selection.json --output artifacts/compatibility/result || matrix_exit=$?
+          if [ "$matrix_exit" -ne "$EXPECTED_MATRIX_EXIT" ]; then
+            echo "Expected selected matrix exit $EXPECTED_MATRIX_EXIT; actual exit $matrix_exit"
+            exit 1
+          fi
+          python3 tooling/prepare-compatibility.py check --policy compatibility/macos-aarch64.json --report artifacts/compatibility/result/compatibility-matrix.json
+          echo 'Every selected row passed its policy checks. See compatibility-matrix.json for complete coverage and any explicitly absent release baseline.' >> "$GITHUB_STEP_SUMMARY"
+      - name: Retain reports without package executables or runtime caches
+        if: ${{ always() }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: declared-host-macos-aarch64
+          path: |
+            artifacts/compatibility/candidate-run.json
+            artifacts/compatibility/inputs/selection.json
+            artifacts/compatibility/inputs/input-summary.json
+            artifacts/compatibility/inputs/*-inspection.json
+            artifacts/compatibility/result/compatibility-matrix.json
+            artifacts/compatibility/result/*/host-results/compatibility.json
+            artifacts/compatibility/result/*/host-results/*.log
+            artifacts/compatibility/result/*/*.log
+          if-no-files-found: error
+          retention-days: 14

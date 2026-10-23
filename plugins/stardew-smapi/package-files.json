@@ -1,0 +1,79 @@
+{
+  "formatVersion": 1,
+  "files": [
+    "manifest.json",
+    "components/component.mjs",
+    "components/smapi.mjs",
+    "schemas/manifest-context-basis.schema.json",
+    "profiles/source-import.json",
+    "profiles/build.json",
+    "profiles/translation-import.json",
+    "LICENSE",
+    "README.md",
+    "PROVENANCE.md",
+    "CHANGELOG.md",
+    "CHANGELOG.zh-CN.md",
+    "package.json",
+    "pnpm-lock.yaml",
+    "package-files.json",
+    ".generated/jsonc-parser/package.json",
+    ".generated/jsonc-parser/LICENSE.md",
+    ".generated/jsonc-parser/lib/umd/main.js",
+    ".generated/jsonc-parser/lib/umd/impl/edit.js",
+    ".generated/jsonc-parser/lib/umd/impl/format.js",
+    ".generated/jsonc-parser/lib/umd/impl/parser.js",
+    ".generated/jsonc-parser/lib/umd/impl/scanner.js",
+    ".generated/jsonc-parser/lib/umd/impl/string-intern.js",
+    "profiles/review.json"
+  ],
+  "sdkFiles": [
+    {
+      "source": "javascript/source-context.mjs",
+      "target": "sdk/source-context.mjs"
+    },
+    {
+      "source": "javascript/source-context-profile.mjs",
+      "target": "sdk/source-context-profile.mjs"
+    },
+    {
+      "source": "javascript/validate-source-context-facts.mjs",
+      "target": "sdk/validate-source-context-facts.mjs"
+    },
+    {
+      "source": "javascript/validate-source-extraction-input.mjs",
+      "target": "sdk/validate-source-extraction-input.mjs"
+    },
+    {
+      "source": "javascript/validate-source-extraction-check-input.mjs",
+      "target": "sdk/validate-source-extraction-check-input.mjs"
+    },
+    {
+      "source": "javascript/validate-build-input.mjs",
+      "target": "sdk/validate-build-input.mjs"
+    },
+    {
+      "source": "javascript/validate-artifact-check-input.mjs",
+      "target": "sdk/validate-artifact-check-input.mjs"
+    },
+    {
+      "source": "javascript/validate-translation-extraction-input.mjs",
+      "target": "sdk/validate-translation-extraction-input.mjs"
+    },
+    {
+      "source": "javascript/validate-translation-extraction-check-input.mjs",
+      "target": "sdk/validate-translation-extraction-check-input.mjs"
+    },
+    {
+      "source": "javascript/validate-translation-exchange.mjs",
+      "target": "sdk/validate-translation-exchange.mjs"
+    },
+    {
+      "source": "javascript/validate-review-check-input.mjs",
+      "target": "sdk/validate-review-check-input.mjs"
+    },
+    {
+      "source": "LICENSE",
+      "target": "sdk/LICENSE"
+    }
+  ]
+}

@@ -1,0 +1,13 @@
+{
+  "name": "@tsumugi/plugin-stardew-smapi",
+  "version": "0.1.0-alpha.1",
+  "private": true,
+  "type": "module",
+  "engines": { "node": ">=26.10.0 <27" },
+  "packageManager": "pnpm@12.8.1",
+  "scripts": {
+    "build": "python3 tooling/prepare-parser.py",
+    "test": "node --test tests/*.test.mjs"
+  },
+  "dependencies": { "jsonc-parser": "3.3.1" }
+}

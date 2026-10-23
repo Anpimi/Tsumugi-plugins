@@ -1,0 +1,54 @@
+{
+  "profile": {
+    "id": "org.tsumugi.examples.philosophy-terminology",
+    "schemaVersion": 1,
+    "behaviorVersion": 1
+  },
+  "checker": "check",
+  "disposition": "advisory",
+  "supportingResources": [
+    "terminology"
+  ],
+  "rules": [
+    {
+      "rule": {
+        "id": "org.tsumugi.examples.philosophy-term.validity",
+        "schemaVersion": 1,
+        "behaviorVersion": 1
+      },
+      "requiresTranslation": true,
+      "title": "validity",
+      "description": "Use this entry when discussing an argument's validity; do not infer the intended sense from the spelling alone."
+    },
+    {
+      "rule": {
+        "id": "org.tsumugi.examples.philosophy-term.soundness",
+        "schemaVersion": 1,
+        "behaviorVersion": 1
+      },
+      "requiresTranslation": true,
+      "title": "soundness",
+      "description": "Use this entry for the selected logic sense of soundness, not sound as audio or a condition of health."
+    },
+    {
+      "rule": {
+        "id": "org.tsumugi.examples.philosophy-term.premise",
+        "schemaVersion": 1,
+        "behaviorVersion": 1
+      },
+      "requiresTranslation": true,
+      "title": "premise",
+      "description": "This project's preferred term applies to the selected argument context."
+    },
+    {
+      "rule": {
+        "id": "org.tsumugi.examples.philosophy-term.inference",
+        "schemaVersion": 1,
+        "behaviorVersion": 1
+      },
+      "requiresTranslation": true,
+      "title": "inference",
+      "description": "Use the preferred term only within the explicitly selected reasoning context."
+    }
+  ]
+}
