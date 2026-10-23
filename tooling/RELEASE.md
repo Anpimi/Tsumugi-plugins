@@ -201,8 +201,9 @@ python3 tooling/release-plugin.py publish \
 The fixed remote sequence is:
 
 1. Read the exact source commit from the official plugin repository; reject any
-   existing same-name tag or release. Authentication/read failures do not count
-   as absence.
+   existing same-name tag or release, including drafts. The official GraphQL
+   lookup resolves a draft's database ID even before a Git tag exists; subsequent
+   REST reads bind that exact ID. Authentication/read failures do not count as absence.
 2. Create a draft prerelease with the exact source target and `latest=false`.
 3. Upload only the captured reviewed assets without overwrite flags.
 4. Download every asset from that draft and compare its exact bytes with the
@@ -231,11 +232,21 @@ confirmed final publication. `published` requires the final readback checks.
 An interrupted process may leave only its durable event journal; reconcile those
 events with GitHub before deciding what happened.
 
-Do not blindly rerun an uncertain attempt. Existing remote tags/releases are
-always refused, even when they resemble a previous attempt. Inspect the retained
-receipt and current remote state, then decide a separately authorized recovery.
-The tool has no automatic resume, asset replacement, deletion, tag rewrite or
-rollback operation. A discovered post-publication mismatch remains an observed
+Do not blindly rerun an uncertain attempt. Ordinary publication refuses existing
+remote tags/releases, even when they resemble a previous attempt. Inspect the
+retained receipt and current remote state before deciding a manual recovery.
+There is no automatic resume, asset replacement, deletion, tag rewrite or
+rollback operation. One narrow manual recovery is available after read-only
+reconciliation: explicitly select `--recover-empty-draft <database-id>` with
+the same reviewed plan digest and `--execute`, using a new attempt directory.
+The exact draft ID, tag, target commit and prerelease identity must match; the
+draft must have **zero assets and no Git tag**. This skips creation and continues
+the original capture/upload/readback sequence without replacing anything.
+An existing asset, tag or published release refuses this recovery. Preserve the
+first attempt and keep the exact continuation within the operator's authorization;
+the recovery flag itself cannot grant account permission.
+
+A discovered post-publication mismatch remains an observed
 published-state problem and is not disguised as a successful rollback.
 
 ## Focused verification

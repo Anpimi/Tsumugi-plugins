@@ -344,8 +344,31 @@ class Gh:
                     return CANDIDATE.json_object(b"\n\n".join(blocks[number + 1:]))
         raise ValueError("GitHub read has no usable HTTP status; outcome is unknown")
 
+    def release(self, tag, missing=False):
+        # A draft may have no Git tag yet; REST's by-tag endpoint returns 404
+        # for it. Resolve with the CLI's official GraphQL API, then bind all
+        # subsequent reads to the returned immutable database identity.
+        query = 'query($tag:String!){repository(owner:"Anpimi",name:"Tsumugi-plugins"){release(tagName:$tag){databaseId}}}'
+        result = self.run(["api", "--hostname", "github.com", "graphql",
+                           "--raw-field", "query=" + query, "--raw-field", "tag=" + tag])
+        if result.returncode:
+            raise ValueError("GitHub release lookup failed; absence is unconfirmed")
+        response = CANDIDATE.json_object(result.stdout)
+        data = response.get("data")
+        repository = data.get("repository") if isinstance(data, dict) else None
+        if response.get("errors") or not isinstance(repository, dict) or "release" not in repository:
+            raise ValueError("GitHub release lookup has no verified repository result")
+        release = repository["release"]
+        if release is None and missing:
+            return None
+        if not isinstance(release, dict) or type(release.get("databaseId")) is not int or release["databaseId"] <= 0:
+            raise ValueError("GitHub release lookup has no exact release identity")
+        return self.api(f"repos/{REPOSITORY}/releases/{release['databaseId']}")
 
-def publish(prepared, expected, output, execute=False, gh=None):
+
+def publish(prepared, expected, output, execute=False, gh=None, recovery_id=None):
+    if recovery_id is not None and (type(recovery_id) is not int or recovery_id <= 0):
+        raise ValueError("empty-draft recovery requires an explicit positive release database ID")
     plan, files = captured_plan(Path(os.path.abspath(prepared)), expected)
     attempt = new_directory(output)
     upload = new_directory(attempt / "upload")
@@ -365,12 +388,11 @@ def publish(prepared, expected, output, execute=False, gh=None):
     gh = gh or Gh()
     tag = plan["release"]["tag"]
     prefix = f"repos/{REPOSITORY}"
-    release_path = f"{prefix}/releases/tags/{quote(tag, safe='')}"
     ref_path = f"{prefix}/git/ref/tags/{quote(tag, safe='')}"
     created_id = None
 
     def observe():
-        value = gh.api(release_path, missing=True)
+        value = gh.api(f"{prefix}/releases/{created_id}") if created_id is not None else gh.release(tag, missing=True)
         if value is not None:
             receipt["remote"] = {key: value.get(key) for key in ("id", "html_url", "tag_name", "target_commitish", "draft", "prerelease")}
             receipt["remote"]["assets"] = [{key: asset.get(key) for key in ("id", "name", "size", "state", "digest")} for asset in value.get("assets", [])]
@@ -412,15 +434,24 @@ def publish(prepared, expected, output, execute=False, gh=None):
         commit = gh.api(f"{prefix}/git/commits/{plan['sourceCommit']}")
         if commit.get("sha") != plan["sourceCommit"]:
             raise ValueError("reviewed source commit is not available in the publication repository")
-        if observe() is not None or gh.api(ref_path, missing=True) is not None:
-            raise ValueError("release/tag already exists; no overwrite or automatic resumption is allowed")
-        receipt["status"] = "outcome-unknown"
-        mutate("create-draft", ["release", "create", tag, "--repo", GH_REPOSITORY, "--draft", "--prerelease", "--latest=false",
-                                  "--target", plan["sourceCommit"], "--title", f"{plan['plugin']['id']} {plan['plugin']['version']}",
-                                  "--notes-file", str(upload / "release-notes.md")])
-        remote = checked_release(observe(), True)
-        created_id = remote["id"]
-        event("create-draft", "remote-draft-confirmed")
+        remote, ref = observe(), gh.api(ref_path, missing=True)
+        if recovery_id is not None:
+            created_id = recovery_id
+            remote = checked_release(remote, True)
+            if ref is not None or remote.get("assets") != []:
+                raise ValueError("explicit recovery requires an empty matching draft with no existing Git tag")
+            receipt["recovery"] = {"emptyDraftId": recovery_id, "planSha256": expected}
+            event("recover-empty-draft", "exact empty draft and absent tag verified; no creation or replacement")
+        else:
+            if remote is not None or ref is not None:
+                raise ValueError("release/tag already exists; no overwrite or automatic resumption is allowed")
+            receipt["status"] = "outcome-unknown"
+            mutate("create-draft", ["release", "create", tag, "--repo", GH_REPOSITORY, "--draft", "--prerelease", "--latest=false",
+                                      "--target", plan["sourceCommit"], "--title", f"{plan['plugin']['id']} {plan['plugin']['version']}",
+                                      "--notes-file", str(upload / "release-notes.md")])
+            remote = checked_release(observe(), True)
+            created_id = remote["id"]
+            event("create-draft", "remote-draft-confirmed")
         for name in sorted(files):
             mutate(f"upload:{name}", ["release", "upload", tag, str(upload / name), "--repo", GH_REPOSITORY])
             checked_release(observe(), True)
@@ -470,13 +501,14 @@ def main():
     publishing.add_argument("--expected-plan-sha256", required=True)
     publishing.add_argument("--output", type=Path, required=True)
     publishing.add_argument("--execute", action="store_true", help="explicitly authorize remote draft creation, uploads, tag creation and publication")
+    publishing.add_argument("--recover-empty-draft", type=int, help="explicitly continue this exact empty draft ID after read-only reconciliation; no tag or assets may exist")
     args = parser.parse_args()
     if args.command == "prepare":
         _, identity = prepare(args.selection, args.output)
         print(f"Prepared one unsigned experimental prerelease. Reviewed plan SHA-256: {identity}")
         print("Publication and production TUF signing remain NOT-RUN.")
     else:
-        result = publish(args.prepared, args.expected_plan_sha256, args.output, args.execute)
+        result = publish(args.prepared, args.expected_plan_sha256, args.output, args.execute, recovery_id=args.recover_empty_draft)
         print(f"Publication status: {result['status']}; retained receipt: {args.output / 'receipt.json'}")
 
 

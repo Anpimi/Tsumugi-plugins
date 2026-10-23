@@ -32,6 +32,11 @@ class RecordingGh(release.Gh):
     def run(self, args):
         self.calls.append(list(args))
         if args[0] == "api":
+            if args[3] == "graphql":
+                assert args[:4] == ["api", "--hostname", "github.com", "graphql"]
+                assert args[4] == args[6] == "--raw-field" and args[7].startswith("tag=")
+                data = {"data": {"repository": {"release": {"databaseId": self.remote["id"]} if self.remote else None}}}
+                return subprocess.CompletedProcess(args, 1 if self.read_status else 0, json.dumps(data).encode(), b"")
             self.assert_api(args)
             path = unquote(args[-1])
             if self.read_status:
@@ -39,6 +44,9 @@ class RecordingGh(release.Gh):
             if "/git/commits/" in path:
                 return self.response(args, 200, {"sha": self.source})
             value = self.tag if "/git/ref/" in path else self.remote
+            # GitHub's REST tag endpoint cannot locate a draft without its tag.
+            if "/releases/tags/" in path and value and value.get("draft"):
+                value = None
             return self.response(args, 200 if value else 404, value or {"message": "Not Found"})
         assert args[:1] == ["release"]
         assert args[args.index("--repo") + 1] == release.GH_REPOSITORY
@@ -67,6 +75,8 @@ class RecordingGh(release.Gh):
         elif operation == "edit":
             assert "--draft=false" in args and "--prerelease" in args and "--latest=false" in args
             self.remote["draft"] = False
+            if self.tag is None:
+                self.tag = {"object": {"type": "commit", "sha": self.source}}
         else:
             raise AssertionError(args)
         if self.fail == operation:
@@ -351,6 +361,40 @@ class ReleasePluginTests(unittest.TestCase):
             self.assertEqual(set(gh.data), {release.PLAN, *[asset["name"] for asset in plan["assets"]]})
             self.assertTrue(all("--clobber" not in call for call in gh.calls))
             self.assertEqual(result["remote"]["id"], 42)
+
+    def test_explicit_empty_draft_recovery_checks_identity_and_never_recreates(self):
+        for changed in (None, "id", "source", "published", "assets", "tag"):
+            with self.subTest(changed=changed), tempfile.TemporaryDirectory() as temporary:
+                root = Path(temporary)
+                plan, identity = self.prepared(root)
+                gh = RecordingGh(plan["sourceCommit"])
+                gh.remote = {"id": 42, "tag_name": plan["release"]["tag"], "target_commitish": plan["sourceCommit"],
+                             "draft": True, "prerelease": True, "assets": []}
+                if changed == "source":
+                    gh.remote["target_commitish"] = "0" * 40
+                elif changed == "published":
+                    gh.remote["draft"] = False
+                elif changed == "assets":
+                    gh.remote["assets"] = [{"name": "existing"}]
+                elif changed == "tag":
+                    gh.tag = {"object": {"type": "commit", "sha": plan["sourceCommit"]}}
+                if changed:
+                    with self.assertRaises(ValueError):
+                        release.publish(root / "prepared", identity, root / "attempt", True, gh, 99 if changed == "id" else 42)
+                    self.assertTrue(all(args[0] == "api" for args in gh.calls))
+                else:
+                    result = release.publish(root / "prepared", identity, root / "attempt", True, gh, 42)
+                    self.assertEqual(result["status"], "published")
+                    self.assertEqual(result["recovery"]["emptyDraftId"], 42)
+                    self.assertFalse(any(args[:2] == ["release", "create"] for args in gh.calls))
+
+    def test_graphql_release_lookup_requires_a_verified_repository_and_exact_id(self):
+        for response in ({"errors": [{"message": "unavailable"}]}, {"data": None}, {"data": {"repository": None}},
+                         {"data": {"repository": {"release": {"databaseId": True}}}}):
+            with self.subTest(response=response), patch.object(release.Gh, "run", return_value=
+                    subprocess.CompletedProcess([], 0, json.dumps(response).encode(), b"")):
+                with self.assertRaises(ValueError):
+                    release.Gh().release("webvtt/v0.1.0-alpha.1", missing=True)
 
     def test_existing_release_tag_or_unavailable_reads_never_mutate(self):
         for conflict in ("release", "tag", "authentication", "transport"):
