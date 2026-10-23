@@ -98,6 +98,12 @@ Host/plugin/runtime combinations and their evidence limits. See
 [中文候选构建说明](README.zh-CN.md) for the same candidate-build operation and
 evidence boundaries.
 
+The [experimental publication guide](tooling/RELEASE.md) describes reviewing
+one plugin's fixed archive and preparing its independent prerelease plan. The
+publisher defaults to a local dry run; publication requires separate operator
+authorization. PR jobs do not receive publication credentials, and these
+unsigned archives do not establish TUF trust or select bundled plugins.
+
 ## Build the independent SDK consumer
 
 The public [plugin authoring walkthrough](https://github.com/Anpimi/Tsumugi/blob/main/docs/plugin-authoring.md)

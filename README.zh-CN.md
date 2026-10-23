@@ -68,6 +68,10 @@ Worker→Core 采纳及清洁离线应用验收，需要各自的独立证据；
 会生成新的兼容性证据，不会回写或改变本次独立候选构建记录的
 `runtimeCompatibility: not-run` 状态。
 
+[实验版逐插件发布指南](tooling/RELEASE.md)说明如何审核单个插件的固定归档并准备
+独立预发布计划。发布入口默认只做本地演练，实际发布需要操作者另行授权；PR
+作业不获得发布凭据。此类未签名归档不建立 TUF 信任，也不选择应用随附插件。
+
 当前选定的 SDK 使用 Process3：JavaScript 入口按冻结集合逐项 `register(id, handler)`，
 三个默认组件仍为 Project scope，Native helper 仅支持单项集合。应从此 SDK 重新准备
 JavaScript 包并重建 Native Worker，旧 Process1/2 明确拒绝；领域契约和同一未分发
