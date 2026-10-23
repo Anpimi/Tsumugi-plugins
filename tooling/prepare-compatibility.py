@@ -17,6 +17,19 @@ CAPTURE = MATRIX.CANDIDATE
 PACKAGER = MATRIX.PACKAGER
 
 
+def released_row(selected, common):
+    baseline = selected.get("releasedBaseline")
+    if baseline == "not-selected":
+        return {"id": "released-baseline-unavailable", "kind": "candidate-host-released-plugins", "status": "not-run",
+                "reason": "No released baseline was selected. Hosted development archives remain candidates."}
+    if not isinstance(baseline, dict) or set(baseline) != {"sourceCommit", "sdkArtifact", "packages"}:
+        raise ValueError("released baseline requires its fixed source, full SDK and two archive selections")
+    row = dict(common, id="released-experimental-plugins", kind="candidate-host-released-plugins",
+               plugins=dict(baseline, sourceDirty=False))
+    MATRIX.validate_matrix({"formatVersion": 1, "combinations": [row]})
+    return row
+
+
 def policy(path):
     value = MATRIX.read_json(path)
     host, candidate = value.get("host", {}), value.get("candidate", {})
@@ -26,8 +39,7 @@ def policy(path):
             or candidate.get("repository") != "Anpimi/Tsumugi-plugins"
             or type(candidate.get("runId")) is not int or candidate["runId"] <= 0
             or candidate.get("artifact") != "plugin-candidates-macos-14"
-            or set(candidate.get("archives", {})) != set(MATRIX.TESTS)
-            or value.get("releasedBaseline") != "not-selected"):
+            or set(candidate.get("archives", {})) != set(MATRIX.TESTS)):
         raise ValueError("select an explicit experimental Mac endpoint and hosted candidate pair")
     for label, commit in [("Host", host.get("commit")), ("PR head", candidate.get("headCommit")),
                           ("actual build", candidate.get("buildCommit"))]:
@@ -37,6 +49,11 @@ def policy(path):
         MATRIX.pinned(digest, 64, "candidate archive")
     if value.get("runtime", {}).get("platform") != value["platform"]:
         raise ValueError("approved runtime platform differs from the endpoint")
+    release = released_row(value, {"host": {"repository": host["repository"], "commit": host["commit"]},
+                                  "runtime": {"tool": "selected-runtime/tool", "host": "selected-runtime/host",
+                                              "approval": "selected-runtime/approval.json"}})
+    if release.get("status") != "not-run" and release["plugins"]["sdkArtifact"]["sha256"] != value["sdkArtifactSha256"]:
+        raise ValueError("the experimental release baseline must use the selected full SDK")
     return value
 
 
@@ -110,42 +127,52 @@ def prepare(selected, host, candidates, runtime, inspector, run_record, output):
                           "sdkArtifact": build["sdkArtifact"], "packages": packages},
               "runtime": {"tool": str(runtime / "tool"), "host": str(runtime / "host"),
                           "approval": str(output / "runtime-approval.json")}}
+    release = released_row(selected, common)
+    if release.get("status") != "not-run" and release["plugins"]["sdkArtifact"] != build["sdkArtifact"]:
+        raise ValueError("the complete release SDK differs from the selected candidate SDK")
     matrix = {"formatVersion": 1, "combinations": [
         dict(common, id="paired-current-candidates", kind="paired-candidates"),
         dict(common, id="declared-experimental-host", kind="candidate-plugins-declared-host"),
-        {"id": "released-baseline-unavailable", "kind": "candidate-host-released-plugins", "status": "not-run",
-         "reason": "No released baseline was selected. Hosted development archives remain candidates."}]}
+        release]}
     MATRIX.validate_matrix(matrix)
     write_json(output / "selection.json", matrix)
     write_json(output / "input-summary.json", {"hostSupport": selected["host"], "platform": selected["platform"],
                "candidateRun": selected["candidate"], "actualBuildCommit": build["sourceCommit"],
                "sdkArtifact": build["sdkArtifact"], "runtimeApprovalMatched": True,
-               "publication": "not-run", "scope": "paired and declared endpoint only; released class remains not-run"})
+               "releasedBaseline": selected["releasedBaseline"], "publication": "not-run in this CI job",
+               "scope": "Every selected class is executed; an absent release baseline remains not-run."})
     return matrix
 
 
 def check_selected(report, selected):
-    if report.get("status") != "incomplete":
-        raise ValueError("the bootstrap matrix must preserve its incomplete release class")
+    has_release = selected["releasedBaseline"] != "not-selected"
+    if report.get("status") != ("passed" if has_release else "incomplete"):
+        raise ValueError("matrix status does not match its selected release coverage")
     rows = report.get("combinations", [])
     expected = {"paired-candidates", "candidate-plugins-declared-host", "candidate-host-released-plugins"}
     if len(rows) != 3 or {r.get("kind") for r in rows} != expected:
         raise ValueError("selected matrix classes changed")
     for row in rows:
-        if row["kind"] == "candidate-host-released-plugins":
+        is_release = row["kind"] == "candidate-host-released-plugins"
+        if is_release and not has_release:
             if row.get("status") != "not-run" or not row.get("reason"):
                 raise ValueError("a candidate cannot be relabelled as a released baseline")
             continue
         selection = row.get("selection", {})
+        expected_source = selected["releasedBaseline"]["sourceCommit"] if is_release else selected["candidate"]["buildCommit"]
         if (row.get("status") != "passed" or selection.get("host", {}).get("commit") != selected["host"]["commit"]
-                or selection.get("plugins", {}).get("sourceCommit") != selected["candidate"]["buildCommit"]
+                or selection.get("plugins", {}).get("sourceCommit") != expected_source
                 or selection.get("plugins", {}).get("sdkArtifact", {}).get("sha256") != selected["sdkArtifactSha256"]):
             raise ValueError("the selected declared/paired row did not pass")
+        if is_release and selection["plugins"] != dict(selected["releasedBaseline"], sourceDirty=False):
+            raise ValueError("released row differs from its exact source, SDK or public archive selection")
         MATRIX.verify_result(row.get("hostReport", {}), selection)
-        if row["hostReport"]["host"].get("dirty") is not False:
+        if (row["hostReport"]["host"].get("dirty") is not False
+                or row["hostReport"]["host"].get("after") != {"commit": selected["host"]["commit"], "dirty": False}):
             raise ValueError("declared Host evidence must identify a clean checkout")
         runtime = row["hostReport"].get("runtime", {})
-        if runtime.get("approvalMatched") is not True or runtime.get("approvedDescriptor") != selected["runtime"]:
+        if (runtime.get("approvalMatched") is not True or runtime.get("approvedDescriptor") != selected["runtime"]
+                or runtime.get("inspection", {}).get("environment") != selected["runtime"]):
             raise ValueError("the selected row did not execute with the approved runtime")
 
 
@@ -161,6 +188,7 @@ def main():
         print("host_commit=" + selected["host"]["commit"])
         print("run_id=" + str(selected["candidate"]["runId"]))
         print("artifact=" + selected["candidate"]["artifact"])
+        print("matrix_exit=" + ("2" if selected["releasedBaseline"] == "not-selected" else "0"))
     elif args.mode == "prepare":
         if not all([args.host, args.candidates, args.runtime, args.inspector, args.run_record, args.output]):
             parser.error("prepare requires explicit Host, candidate, runtime, inspector, run record and new output paths")
@@ -170,7 +198,10 @@ def main():
         if not args.report:
             parser.error("check requires the actual matrix report")
         check_selected(MATRIX.read_json(args.report), selected)
-        print("Paired and declared Host rows passed; full matrix remains incomplete, released baseline not-run.")
+        if selected["releasedBaseline"] == "not-selected":
+            print("Paired and declared Host rows passed; full matrix remains incomplete, released baseline not-run.")
+        else:
+            print("All three selected compatibility classes passed, including the actual released plugin archives.")
 
 
 if __name__ == "__main__":

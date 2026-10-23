@@ -64,7 +64,7 @@ jobs:
           retention-days: 14
 
   declared-host:
-    name: Declared experimental Host (release matrix incomplete)
+    name: Pinned experimental Host compatibility
     if: ${{ github.event_name == 'pull_request' }}
     runs-on: macos-14
     timeout-minutes: 60
@@ -125,16 +125,18 @@ jobs:
       - name: Inspect the frozen packages and construct the explicit selection
         run: |
           python3 tooling/prepare-compatibility.py prepare --policy compatibility/macos-aarch64.json --host "$GITHUB_WORKSPACE/host-source" --candidates "$RUNNER_TEMP/candidate-input" --runtime "$RUNNER_TEMP/prepared-runtime" --inspector "$CARGO_TARGET_DIR/debug/tsumugi-plugin-package" --run-record artifacts/compatibility/candidate-run.json --output "$GITHUB_WORKSPACE/artifacts/compatibility/inputs"
-      - name: Exercise paired and declared Host journeys while retaining the missing release class
+      - name: Exercise every selected compatibility class
+        env:
+          EXPECTED_MATRIX_EXIT: ${{ steps.selection.outputs.matrix_exit }}
         run: |
           matrix_exit=0
           python3 tooling/compatibility-matrix.py --matrix artifacts/compatibility/inputs/selection.json --output artifacts/compatibility/result || matrix_exit=$?
-          if [ "$matrix_exit" -ne 2 ]; then
-            echo "Expected the explicitly incomplete bootstrap matrix; actual exit $matrix_exit"
+          if [ "$matrix_exit" -ne "$EXPECTED_MATRIX_EXIT" ]; then
+            echo "Expected selected matrix exit $EXPECTED_MATRIX_EXIT; actual exit $matrix_exit"
             exit 1
           fi
           python3 tooling/prepare-compatibility.py check --policy compatibility/macos-aarch64.json --report artifacts/compatibility/result/compatibility-matrix.json
-          echo 'Paired and declared experimental Host rows passed. Full matrix remains INCOMPLETE: released-plugin baseline not-run.' >> "$GITHUB_STEP_SUMMARY"
+          echo 'Every selected row passed its policy checks. See compatibility-matrix.json for complete coverage and any explicitly absent release baseline.' >> "$GITHUB_STEP_SUMMARY"
       - name: Retain reports without package executables or runtime caches
         if: ${{ always() }}
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2

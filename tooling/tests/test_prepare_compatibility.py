@@ -18,6 +18,7 @@ spec.loader.exec_module(fixtures)
 class PrepareCompatibilityTests(unittest.TestCase):
     def setUp(self):
         self.policy = prepare.policy(ROOT / "compatibility/macos-aarch64.json")
+        self.policy["releasedBaseline"] = "not-selected"
 
     def report(self):
         rows = []
@@ -27,7 +28,9 @@ class PrepareCompatibilityTests(unittest.TestCase):
             row["plugins"]["sourceCommit"] = self.policy["candidate"]["buildCommit"]
             row["plugins"]["sdkArtifact"]["sha256"] = self.policy["sdkArtifactSha256"]
             host = fixtures.host_report(row)
-            host["runtime"] = {"approvalMatched": True, "approvedDescriptor": self.policy["runtime"]}
+            host["host"]["after"] = {"commit": self.policy["host"]["commit"], "dirty": False}
+            host["runtime"] = {"approvalMatched": True, "approvedDescriptor": self.policy["runtime"],
+                               "inspection": {"environment": self.policy["runtime"]}}
             rows.append({"kind": kind, "status": "passed", "selection": row, "hostReport": host})
         rows.append({"kind": "candidate-host-released-plugins", "status": "not-run", "reason": "No released baseline selected"})
         return {"status": "incomplete", "combinations": rows}
@@ -73,10 +76,46 @@ class PrepareCompatibilityTests(unittest.TestCase):
                      lambda r: r["combinations"].pop(),
                      lambda r: r["combinations"][0]["hostReport"]["cases"][0]["executionCounts"].update(passed=0),
                      lambda r: r["combinations"][0]["hostReport"]["host"].update(dirty=True),
+                     lambda r: r["combinations"][0]["hostReport"]["host"]["after"].update(dirty=True),
                      lambda r: r["combinations"][0]["selection"]["host"].update(commit="a" * 40),
-                     lambda r: r["combinations"][0]["hostReport"]["runtime"].update(approvalMatched=False)]
+                     lambda r: r["combinations"][0]["hostReport"]["runtime"].update(approvalMatched=False),
+                     lambda r: r["combinations"][0]["hostReport"]["runtime"]["inspection"].update(environment={})]
         for mutation in mutations:
             wrong = self.report()
             mutation(wrong)
             with self.assertRaises(ValueError):
                 prepare.check_selected(wrong, self.policy)
+
+    def test_selected_releases_require_three_passed_exact_archive_rows(self):
+        policy = prepare.policy(ROOT / "compatibility/macos-aarch64.json")
+        report = self.report()
+        report["status"] = "passed"
+        common = report["combinations"][0]["selection"]
+        row = prepare.released_row(policy, {"host": common["host"], "runtime": common["runtime"]})
+        host = fixtures.host_report(row)
+        host["host"]["after"] = {"commit": policy["host"]["commit"], "dirty": False}
+        host["runtime"] = report["combinations"][0]["hostReport"]["runtime"]
+        report["combinations"][-1] = {"kind": row["kind"], "status": "passed", "selection": row, "hostReport": host}
+        prepare.check_selected(report, policy)
+        for mutate in (lambda r: r.update(status="incomplete"),
+                       lambda r: r["combinations"][-1].update(status="not-run"),
+                       lambda r: r["combinations"][-1]["selection"]["plugins"]["packages"]["webvtt"]["archive"].update(url="https://example.invalid/other.tar"),
+                       lambda r: r["combinations"][-1]["selection"]["plugins"].update(sourceDirty=True)):
+            wrong = copy.deepcopy(report)
+            mutate(wrong)
+            with self.assertRaises(ValueError):
+                prepare.check_selected(wrong, policy)
+
+    def test_release_policy_refuses_local_or_unpinned_baselines(self):
+        policy = prepare.policy(ROOT / "compatibility/macos-aarch64.json")
+        for mutate in (lambda p: p["releasedBaseline"].update(sourceCommit="main"),
+                       lambda p: p["releasedBaseline"]["sdkArtifact"].update(sha256="a" * 64),
+                       lambda p: p["releasedBaseline"]["packages"].pop("webvtt"),
+                       lambda p: p["releasedBaseline"]["packages"]["webvtt"].update(directory="local-candidate")):
+            wrong = copy.deepcopy(policy)
+            mutate(wrong)
+            with tempfile.TemporaryDirectory() as temporary:
+                path = Path(temporary) / "policy.json"
+                path.write_text(json.dumps(wrong), encoding="utf-8")
+                with self.assertRaises(ValueError):
+                    prepare.policy(path)

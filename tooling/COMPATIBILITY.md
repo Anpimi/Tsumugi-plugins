@@ -29,12 +29,20 @@ and declared-Host rows to the existing matrix runner. Both rows run the actual
 two-domain journeys; repeated journeys across categories are not distinct new
 test cases. It never substitutes the current checkout for the declared source.
 
-The scoped PR job requires those two rows to pass and the released-plugin row
-to remain explicitly `not-run`. Its summary states that the complete matrix is
-still `incomplete` (exit 2). The separate manual workflow continues to require
-the full matrix; this scoped job cannot certify a released baseline or authorize
-publication. Runtime caches, source checkouts and executables are not uploaded
-with its report artifacts. No signing or publishing credentials are supplied.
+The policy now also selects the separately published WebVTT and SMAPI archives
+by their actual public release URLs, transport digests, source commit and full
+SDK lock. The original matrix downloads those archives independently; the PR
+job requires **all three classes to pass** (exit 0). The pinned historical
+candidate inputs are explicit: this job does not silently select newly built
+archives from the current PR or claim compatibility for unselected bytes.
+
+Before a first release, `releasedBaseline: "not-selected"` preserves the third
+row as `not-run` and requires `incomplete` (exit 2). Existing bootstrap reports
+remain unchanged after publication. Selecting an actual release adds evidence;
+it never relabels a local candidate. Both modes reject any failed selected row.
+The separate manual workflow still requires a complete matrix. No matrix job
+authorizes publication. Runtime caches, source checkouts and executables are
+not uploaded with reports, and no signing or publishing credentials are supplied.
 
 ## Run a local matrix
 
