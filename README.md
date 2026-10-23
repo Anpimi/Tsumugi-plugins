@@ -142,8 +142,8 @@ old Process-1/2 workers are refused without a transport fallback. JavaScript
 entries register each exact contribution from the frozen component roster. The
 three default components retain their Project scope; the Native helper remains
 explicitly singleton. Manifest and
-content-exchange versions, domain profiles and the undistributed alpha.1 package
-versions are unchanged. This selection does not publish or install a package.
+content-exchange versions, domain profiles and the alpha.1 package versions are
+unchanged. SDK selection alone does not publish or install a package.
 
 The selected SDK also includes the bounded generation-component input wrapper,
 generation-service data and declared text-query payload preparation. These data helpers grant no execution authority;

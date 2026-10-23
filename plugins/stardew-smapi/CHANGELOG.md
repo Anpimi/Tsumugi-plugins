@@ -4,6 +4,14 @@ English is authoritative; [简体中文](CHANGELOG.zh-CN.md) mirrors these chang
 
 ## [Unreleased]
 
+## [0.1.0-alpha.1] - 2026-10-23
+
+First [unsigned experimental archive](https://github.com/Anpimi/Tsumugi-plugins/releases/tag/stardew-smapi/v0.1.0-alpha.1), published on the date above in UTC.
+Built from `d0e8c826ef099cceeab059c7aed5370034296c54`; supports only the exact
+experimental Host `e0d223f9bcbbca9decad63d62a90aed8510f9cf0` on macOS aarch64,
+with minimum = current. This publication establishes neither TUF trust nor
+automatic bundled-plugin selection.
+
 ### Changed
 
 - Register the exact callable roster through the public `contributions` and
@@ -12,9 +20,7 @@ English is authoritative; [简体中文](CHANGELOG.zh-CN.md) mirrors these chang
 
 - Prepare SDK helpers and package provenance from the selected public Process-3
   SDK snapshot. Use the matching Process-3 Host; SMAPI/domain contracts and the
-  same undistributed alpha.1 package version remain unchanged.
-
-Development target: **0.1.0-alpha.1**. No plugin release has been published.
+  same alpha.1 package version remain unchanged.
 
 ### Added
 
@@ -25,7 +31,7 @@ Development target: **0.1.0-alpha.1**. No plugin release has been published.
   coordinate-free Name basis changes revisions when Name changes, while
   manifest whitespace alone does not.
 
-- Source recipes now use schema/behavior 2/2 and require their exact immutable `review-profile` Resource. Consumers must use the newly pinned SDK; earlier experimental recipes are refused without conversion. Source and Review data contracts and the unreleased package version remain unchanged.
+- Source recipes now use schema/behavior 2/2 and require their exact immutable `review-profile` Resource. Consumers must use the newly pinned SDK; earlier experimental recipes are refused without conversion. Source and Review data contracts and the alpha.1 package version remain unchanged.
 
 - A mandatory review Resource and selected-text QA capability now check fixed source evidence and exact rule versions through SDK CheckResults. Missing text uses only explicitly permitted N/A evidence; source checks continue. Core approval, terminology, fallback, waivers and release eligibility remain separate application responsibilities.
 

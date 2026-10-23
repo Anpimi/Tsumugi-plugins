@@ -4,6 +4,13 @@
 
 ## [Unreleased]
 
+## [0.1.0-alpha.1] - 2026-10-23
+
+首个[未签名实验归档](https://github.com/Anpimi/Tsumugi-plugins/releases/tag/stardew-smapi/v0.1.0-alpha.1)，发布日期采用 UTC。
+构建源码为 `d0e8c826ef099cceeab059c7aed5370034296c54`；仅支持 macOS aarch64 上的
+准确实验 Host `e0d223f9bcbbca9decad63d62a90aed8510f9cf0`，minimum=current。
+本次发布不建立 TUF 信任，也不自动选择应用随附插件。
+
 ### Changed
 
 - 通过公共 `contributions` 与 `register(id, handler)` API 登记准确能力集合；
@@ -12,15 +19,13 @@
 ### 变更
 
 - 从选定的公共 Process-3 SDK 快照准备 SDK helper 与包来源，并使用匹配的
-  Process-3 Host；SMAPI／领域契约和同一未分发 alpha.1 包版本保持不变。
-
-开发目标：**0.1.0-alpha.1**。尚未发布插件版本。
+  Process-3 Host；SMAPI／领域契约和同一 alpha.1 包版本保持不变。
 
 ### Added
 
 - 源提取现在把 manifest 中真实的 `Name` 作为带来源范围的快照说明，前提是其符合 SDK 事实长度上限。超长名称仍保留原源导入，标记为上下文不可用；独立检查器拒绝遗漏、截断和臆造的角色或说话者。另以不含坐标的名称依据判断修订变化：名称变化会使修订变化，仅空白位置变化不会。
 
-- 源配方改用 schema/behavior 2/2，并必须引用准确且不可变的 `review-profile` Resource。消费者须使用新固定的 SDK；旧实验配方拒绝，不做转换。源与 Review 数据契约及未发布插件版本保持不变。
+- 源配方改用 schema/behavior 2/2，并必须引用准确且不可变的 `review-profile` Resource。消费者须使用新固定的 SDK；旧实验配方拒绝，不做转换。源与 Review 数据契约及 alpha.1 插件版本保持不变。
 
 - 新增必需审阅 Resource 与所选文本 QA 能力，通过 SDK CheckResults 检查固定源证据和准确规则版本。缺译文只允许明确捕获的不适用依据，源检查继续执行；Core 人工批准、术语、回退、豁免和发布资格仍由应用负责。
 

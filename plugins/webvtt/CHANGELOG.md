@@ -5,6 +5,14 @@ This project follows Semantic Versioning. The first package is experimental.
 
 ## [Unreleased]
 
+## [0.1.0-alpha.1] - 2026-10-23
+
+First [unsigned experimental archive](https://github.com/Anpimi/Tsumugi-plugins/releases/tag/webvtt/v0.1.0-alpha.1), published on the date above in UTC.
+Built from `d0e8c826ef099cceeab059c7aed5370034296c54`; supports only the exact
+experimental Host `e0d223f9bcbbca9decad63d62a90aed8510f9cf0` on macOS aarch64,
+with minimum = current. This publication establishes neither TUF trust nor
+automatic bundled-plugin selection.
+
 ### Added
 
 - Import existing translated WebVTT captions from an explicitly confirmed language
@@ -18,7 +26,7 @@ This project follows Semantic Versioning. The first package is experimental.
   Revision identity continues to use the semantic cue basis, so changing a
   NOTE, line ending or cue position alone does not expire unchanged cues.
 
-- Source recipes now use schema/behavior 2/2 and require their exact immutable `review-profile` Resource. Consumers must use the newly pinned SDK; earlier experimental recipes are refused without conversion. Source and Review data contracts and the unreleased package version remain unchanged.
+- Source recipes now use schema/behavior 2/2 and require their exact immutable `review-profile` Resource. Consumers must use the newly pinned SDK; earlier experimental recipes are refused without conversion. Source and Review data contracts and the alpha.1 package version remain unchanged.
 
 - A mandatory review Resource and selected-text QA capability now check fixed source evidence and exact rule versions through SDK CheckResults. Missing text uses only explicitly permitted N/A evidence; source checks continue. Core approval, terminology, fallback, waivers and release eligibility remain separate application responsibilities.
 
@@ -43,7 +51,7 @@ This project follows Semantic Versioning. The first package is experimental.
 
 - Prepare SDK helpers and package provenance from the selected public Process-3
   SDK snapshot. Use the matching Process-3 Host; caption/domain contracts and the
-  same undistributed alpha.1 package version remain unchanged.
+  same alpha.1 package version remain unchanged.
 
 - Builds now consume SDK BuildInput and return ArtifactSet. A captured BuildDeclaration makes the independent builder/checker discoverable, and artifact checks return mandatory CheckResults with blocking semantic findings. The previous experimental dedicated build/check JSON is refused without conversion; caption limits and byte fidelity remain unchanged.
 
@@ -51,6 +59,4 @@ This project follows Semantic Versioning. The first package is experimental.
   ID display values and UTF-8 byte ranges. Earlier development result shapes are
   refused; consumers must use the same independently selected SDK artifact.
 
-The candidate package version is `0.1.0-alpha.1`; this remains the same unreleased
-experimental batch. No release date or completed
-application migration is claimed.
+This plugin archive publication does not declare the complete application migration finished.

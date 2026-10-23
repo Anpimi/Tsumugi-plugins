@@ -74,5 +74,5 @@ Worker→Core 采纳及清洁离线应用验收，需要各自的独立证据；
 
 当前选定的 SDK 使用 Process3：JavaScript 入口按冻结集合逐项 `register(id, handler)`，
 三个默认组件仍为 Project scope，Native helper 仅支持单项集合。应从此 SDK 重新准备
-JavaScript 包并重建 Native Worker，旧 Process1/2 明确拒绝；领域契约和同一未分发
-alpha.1 包版本保持不变。本选择不发布或安装插件。
+JavaScript 包并重建 Native Worker，旧 Process1/2 明确拒绝；领域契约和同一
+alpha.1 包版本保持不变。仅选择 SDK 不会发布或安装插件。
