@@ -76,7 +76,10 @@ Actions. A separate Ubuntu job builds every Rust workspace target and feature
 with the declared minimum Rust 1.98.0, using only the tracked SDK artifact. It
 checks compilation without rerunning Node suites or producing candidate archives.
 The Rust 1.99.0 jobs still check all four packages, including changes to shared
-tooling or SDK selection. PR runs use `contents: read`, retain no checkout
+tooling or SDK selection. They install pinned pnpm with automatic lifecycle
+scripts disabled, then explicitly run that tool's native-binary setup in the
+temporary tool directory. Project dependency lifecycle scripts remain disabled.
+PR runs use `contents: read`, retain no checkout
 credentials, receive no publication secrets, and have no privileged follow-up
 or release job. Uploaded archives and records are untrusted development
 candidates, not release inputs. No actual hosted run is claimed by this setup.

@@ -58,6 +58,10 @@ jobs:
         run: |
           rustup toolchain install 1.99.0 --profile minimal
           npm install --prefix "$RUNNER_TEMP/candidate-pnpm" --ignore-scripts --no-package-lock pnpm@12.8.1
+          # pnpm 12 ships a shebang-less placeholder until its native binary is linked.
+          # Run only this pinned tool's reviewed setup; project scripts stay disabled.
+          node "$RUNNER_TEMP/candidate-pnpm/node_modules/pnpm/install.js"
+          "$RUNNER_TEMP/candidate-pnpm/node_modules/.bin/pnpm" --version
           echo "$RUNNER_TEMP/candidate-pnpm/node_modules/.bin" >> "$GITHUB_PATH"
       - name: Build and check all independent candidates
         run: |
