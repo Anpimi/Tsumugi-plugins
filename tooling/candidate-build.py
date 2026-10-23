@@ -320,7 +320,7 @@ def build(root, output, runner, report, offline=False, inspector=None):
     locked = ["--locked", *(["--offline"] if offline else [])]
     runner.run("prepare-sdk", [sys.executable, "tooling/prepare-sdk.py"])
     runner.run("packaging-tests", [sys.executable, "-m", "unittest", "discover", "-s", "tooling/tests", "-p", "test_*.py"], tests="python")
-    runner.run("smapi-dependencies", ["pnpm", "--dir", "plugins/stardew-smapi", "install", "--frozen-lockfile", "--ignore-scripts", *(["--offline"] if offline else [])])
+    runner.run("smapi-dependencies", ["pnpm", "--dir", "plugins/stardew-smapi", "install", "--frozen-lockfile", "--ignore-scripts", "--package-import-method=copy", *(["--offline"] if offline else [])])
     runner.run("smapi-parser", [sys.executable, "plugins/stardew-smapi/tooling/prepare-parser.py"])
     runner.run("philosophy-metadata", ["node", "examples/philosophy/tooling/prepare.mjs"])
     runner.run("rust-workspace", [*cargo, "test", "--workspace", "--all-features", *locked], tests="rust")

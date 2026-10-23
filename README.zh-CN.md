@@ -21,7 +21,8 @@ python3 tooling/candidate-build.py --output artifacts/candidates/local
 入口复用现有 SDK 准备、冻结依赖、领域测试与显式打包工具，检查 Rust
 workspace/公开消费端、Python 打包工具和三组 Node 领域测试，并构建
 WebVTT、SMAPI、哲学知识样例及独立 Rust JSON 样例。四包保留各自的版本。
-pnpm 安装禁用 lifecycle scripts，parser 由已有工具显式准备。
+pnpm 安装禁用 lifecycle scripts，并复制依赖文件，避免有界打包器读取共享缓存中的硬链接；
+parser 由已有工具显式准备。
 SDK 直接取自 `sdk.lock.json` 固定的仓内 tracked archive，不要求获取其
 生产源 commit，也不需要私有文档、兄弟 Core checkout 或桌面应用。
 
