@@ -100,6 +100,25 @@ test('AI tool metadata selects the original capability and does not replace its 
   assert.equal(manifest.contributions.filter(c => c.contribution.kind === 'skill').length, 1);
 });
 
+test('the reference UI selects the same component and tool as the original knowledge query', () => {
+  const ui = packageManifest.contributions.find(value => value.id === 'reference-query');
+  assert.deepEqual(ui, { id: 'reference-query', componentId: 'knowledge', contribution: {
+    kind: 'ui', slot: 'reference-query', schema: { id: 'tsumugi.capability-tool-declaration', schemaVersion: 1, behaviorVersion: 1 },
+  } });
+  const resources = packageManifest.contributions.filter(value => value.componentId === ui.componentId
+    && value.contribution.kind === 'resource' && value.contribution.schema.id === ui.contribution.schema.id);
+  assert.equal(resources.length, 1);
+  assert.equal(resources[0].id, 'agent-query-tool');
+  assert.deepEqual(resources[0].contribution.schema, ui.contribution.schema);
+  const tool = JSON.parse(readFileSync(new URL('../resources/agent-query-tool.json', import.meta.url), 'utf8'));
+  const query = packageManifest.contributions.find(value => value.id === tool.capabilityId);
+  assert.equal(query.componentId, ui.componentId);
+  assert.equal(query.contribution.declaration.effect, 'read-only');
+  assert.equal(packageManifest.contributions.find(value => value.id === 'check').componentId, ui.componentId);
+  assert.equal(packageManifest.contributions.find(value => value.id === 'generation-delegate').componentId, 'generation');
+  assert.equal(packageManifest.contributions.find(value => value.id === 'terminology').componentId, 'reference');
+});
+
 test('public text-query presentation uses the original SDK component for single, batch and empty reference results', () => {
   const tool = JSON.parse(readFileSync(new URL('../resources/agent-query-tool.json', import.meta.url), 'utf8'));
   const manifest = JSON.parse(readFileSync(new URL('../manifest.json', import.meta.url), 'utf8'));

@@ -260,7 +260,7 @@
     },
     {
       "id": "agent-query-tool",
-      "componentId": "reference",
+      "componentId": "knowledge",
       "contribution": {
         "kind": "resource",
         "schema": {
@@ -269,6 +269,19 @@
           "behaviorVersion": 1
         },
         "path": "resources/agent-query-tool.json"
+      }
+    },
+    {
+      "id": "reference-query",
+      "componentId": "knowledge",
+      "contribution": {
+        "kind": "ui",
+        "slot": "reference-query",
+        "schema": {
+          "id": "tsumugi.capability-tool-declaration",
+          "schemaVersion": 1,
+          "behaviorVersion": 1
+        }
       }
     },
     {

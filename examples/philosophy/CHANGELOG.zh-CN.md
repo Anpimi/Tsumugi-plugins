@@ -6,6 +6,10 @@
 
 ### Added
 
+- 在原 knowledge 组件声明宿主渲染的 `reference-query` Ui，选择其唯一工具 Resource，
+  不增加执行权限。保留原 query／check／generation 身份、纯数据术语与 Skill、
+  独立同意及账本 owner；同一未分发 alpha.1 批次的新包字节须单独审查。
+
 - 增加独立 Attempt 作用域的 `generation` 组件、带命名空间的
   `generation-delegate` 能力及 required-single WorkPlan generation 服务依赖。
   及独立的已准备查询依赖。该 External 能力申请两项对应 ProjectService 权限；

@@ -70,7 +70,8 @@ const manifest = {
     } } },
     { id: 'terminology', componentId: 'reference', contribution: { kind: 'resource', schema: RESOURCE_SCHEMA, path: 'resources/terminology.json' } },
     { id: 'text-review', componentId: 'reference', contribution: { kind: 'resource', schema: TEXT_REVIEW_DECLARATION_SCHEMA, path: 'resources/text-review.json' } },
-    { id: 'agent-query-tool', componentId: 'reference', contribution: { kind: 'resource', schema: contract('tsumugi.capability-tool-declaration'), path: 'resources/agent-query-tool.json' } },
+    { id: 'agent-query-tool', componentId: 'knowledge', contribution: { kind: 'resource', schema: contract('tsumugi.capability-tool-declaration'), path: 'resources/agent-query-tool.json' } },
+    { id: 'reference-query', componentId: 'knowledge', contribution: { kind: 'ui', slot: 'reference-query', schema: contract('tsumugi.capability-tool-declaration') } },
     { id: 'concept-review', componentId: 'reference', contribution: { kind: 'skill', path: 'skills/concept-review.md' } },
   ],
 };

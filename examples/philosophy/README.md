@@ -77,6 +77,23 @@ Application editor, batch and Agent tool discovery/invocation are separate
 integration work. This package does not claim that those product journeys or an
 AI execution loop have been accepted merely because metadata is present.
 
+## Host-rendered reference query
+
+The `reference-query` Ui contribution belongs to the original `knowledge`
+component and selects its unique `agent-query-tool` Resource with exact
+`tsumugi.capability-tool-declaration` schema/behavior `1/1`. A matching Desktop
+renders the existing reference-query controls. The Host refuses a missing or
+ambiguous same-component Resource, an unsupported slot/schema or a tool pointing
+to another component. Resources, checks, this Ui and generation retain one package
+installation identity. The terminology Resource and Skill remain data-only.
+
+Displaying the controls runs no worker and supplies no permission. Queries retain
+the original runtime review, independent execution consent and Core ledger; output
+remains an unadopted reference. Disablement, replacement or uninstall removes the
+old view without erasing the original query draft or uncertain-action recovery.
+Installed same-version snapshots are never replaced automatically: review the new
+package bytes separately within this undistributed alpha.1 batch.
+
 <a id="generation-service-client"></a>
 
 ## Optional generation service client

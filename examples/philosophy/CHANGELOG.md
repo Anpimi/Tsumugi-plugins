@@ -6,6 +6,12 @@ The English changelog is authoritative; `CHANGELOG.zh-CN.md` mirrors it.
 
 ### Added
 
+- Declare a host-rendered `reference-query` Ui on the original knowledge component,
+  selecting its unique tool Resource without new execution permissions. Keep the
+  original query/check/generation identities, data-only terminology and Skill,
+  consent and ledger owners. Review the new package bytes separately in the same
+  undistributed alpha.1 batch.
+
 - Add an independent Attempt-scoped `generation` component with the namespaced
   `generation-delegate` capability and required single WorkPlan generation
   service and a separate prepared query dependency. The external capability
