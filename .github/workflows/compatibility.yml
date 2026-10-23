@@ -70,7 +70,6 @@ jobs:
     timeout-minutes: 60
     env:
       RUSTUP_TOOLCHAIN: '1.99.0'
-      CARGO_TARGET_DIR: ${{ runner.temp }}/compatibility-target
       CARGO_INCREMENTAL: '0'
       CARGO_PROFILE_DEV_DEBUG: '0'
       CARGO_PROFILE_TEST_DEBUG: '0'
@@ -104,6 +103,7 @@ jobs:
           gh run download "$SELECTED_RUN" --repo Anpimi/Tsumugi-plugins --name "$SELECTED_ARTIFACT" --dir "$RUNNER_TEMP/candidate-input"
       - name: Prepare exact build tools in the disposable runner
         run: |
+          echo "CARGO_TARGET_DIR=$RUNNER_TEMP/compatibility-target" >> "$GITHUB_ENV"
           rustup toolchain install 1.99.0 --profile minimal --no-self-update
           npm install --prefix "$RUNNER_TEMP/compatibility-pnpm" --ignore-scripts --no-package-lock pnpm@12.8.1
           node "$RUNNER_TEMP/compatibility-pnpm/node_modules/pnpm/install.js"
