@@ -1,77 +1,24 @@
 # Rust JSON message catalog example
 
-This independent plugin example consumes the repository's verified public SDK
-archive. It imports no Core, database, desktop, Cordis or private workspace code.
-Its `NativeComponent` uses the SDK entry point for framing, identity, cancellation
-and disposal. One typed [definition](src/definition.rs) generates the manifest
-and Source/Translation/Review/Build Resources; authors do not maintain another wire codec or
-a duplicate JSON manifest. The plugin identity is `org.tsumugi.examples / flat-json`.
-This is an experimental, unreleased `0.1.0-alpha.1` example, not a bundled plugin.
+`org.tsumugi.examples / flat-json` (`0.1.0-alpha.1`) is an example Native Rust plugin built against the repository's pinned public Tsumugi SDK (`sdk.lock.json`).
 
-The selected public SDK uses process protocol 3. Rebuild and package this
-Native worker with the current `sdk.lock.json` before using a Process-3 Host;
-earlier Process-1/2 binaries are refused. This component uses an empty service
-table and requests only captured inputs. The profile and example version remain
-unchanged in the same undistributed alpha.1 batch, with no runtime fallback or
-historical conversion.
+It implements the SDK's `NativeComponent` trait over **process protocol 3** (handling framing, invocation identity, cooperative cancellation, and disposal with an empty service table and singleton activation). A single typed Rust [definition](src/definition.rs) generates the plugin manifest and Source, Translation, Review, and Build Resources so authors do not have to maintain duplicate JSON schemas or wire codecs by hand.
 
-## Current profile
+## Supported `flat-json-messages` profile
 
-`flat-json-messages` schema/behavior 1/1 accepts one captured `source.json`:
-a nonempty flat JSON object of strings, optional UTF-8 BOM, at most 128 KiB and
-2,000 messages. Keys are exact, case-sensitive Unicode strings of 1–128 UTF-8
-bytes without control characters. Duplicate decoded keys, comments, nested
-values, trailing data, invalid JSON and NUL text are refused. Values may be
-empty and contain Unicode and line breaks, up to the SDK's 16 KiB text bound.
-No Unicode normalization or key rewriting occurs.
+The `flat-json-messages` (`1/1`) profile handles flat JSON string catalogs:
 
-Brace tokens such as `{name}` use an ASCII letter or underscore followed by
-letters, digits, `_`, `.` or `-`, at most 64 bytes. Unmatched/nested braces and
-other brace syntaxes are unsupported. Source occurrences refer to the original
-quoted JSON literal with UTF-8 byte offsets; protected tokens refer to decoded
-message text. The native display key is derived from JSON decoding, with no
-invented literal source range. Original captured bytes, BOM and line endings
-remain source evidence. A canonical opaque per-occurrence key block supplies
-the domain revision basis; Core alone allocates project identities/revisions.
+- **Source format (`source.json`)**: A non-empty flat JSON object mapping keys to strings, with an optional UTF-8 BOM, up to 128 KiB and 2,000 messages. Keys are case-sensitive Unicode strings (1–128 UTF-8 bytes, no control characters). Duplicate keys, comments, nested objects/arrays, trailing data, invalid JSON, and NUL characters are rejected. Values can be empty strings or multiline Unicode text up to 16 KiB, preserved without Unicode normalization.
+- **Placeholders and byte ranges**: Brace tokens such as `{name}` start with an ASCII letter or underscore followed by ASCII letters, digits, `_`, `.`, or `-` (up to 64 bytes); unmatched or nested braces are rejected. Source occurrences point to the original quoted JSON value using UTF-8 byte offsets, while protected placeholder tokens point to offsets within the decoded message text. Each occurrence includes a canonical opaque key block as its revision basis.
+- **Independent source and review checks**: The source checker reparses `source.json` from scratch to verify full coverage, keys, quoted byte ranges, placeholder ranges, ordering, and revision basis blocks. During QA review, source rules are mandatory and non-waivable, while the placeholder token rule compares exact `{placeholder}` counts in translations (allowing the `missing-translation` N/A basis only when the entire selected scope is untranslated).
+- **Locale building and artifact checking**: The builder takes decided target texts and one `.json` output path, emitting sorted keys with two-space indentation, a trailing LF, and the source's BOM behavior. The independent artifact checker reparses the generated JSON and verifies every decoded key/value pair, role, BOM, and SDK binding (formatting whitespace differences alone are permitted, whereas missing, extra, or altered entries produce blocking findings).
+- **Existing translation import**: Accepts a single `translations/<target-language>.json` file (up to 128 KiB and 2,000 messages) whose filename stem matches the confirmed target language under the `flat-json:source` namespace and `flat-json.message-key` policy. An empty object (`{}`) produces a valid zero-entry proposal, and the `flat-json.translation-semantics` checker independently reparses the file to verify all keys, values, display evidence, and UTF-8 ranges.
 
-The independent source checker reparses captured input and checks complete
-coverage, identity, literal ranges, token ranges, order and basis without calling
-the extractor. QA always checks source semantics; a separate mandatory token
-rule compares exact placeholder multiplicity in selected translations. That
-rule permits the SDK's fixed missing-translation N/A only for an entirely
-missing scope. Source rules cannot be skipped or waived.
-
-The builder accepts complete already-selected target texts, no configuration,
-and one authorized `.json` output path. It emits sorted keys, two-space JSON,
-a final LF and the source BOM. This profile does not promise preservation of
-source JSON formatting in the translated artifact. The separate artifact
-checker reparses actual output and compares every decoded key/value, role,
-BOM and fixed SDK association. It does not call the builder as an oracle;
-formatting differences alone are allowed. Broken/omitted/extra text remains a
-blocking finding even when an attacker recalculates the artifact hash.
-
-Existing translations use one captured `translations/<target-language>.json`
-under the same 128 KiB/2,000-message bounds. Filename spelling must exactly match
-the explicitly confirmed project target; the `flat-json:source` namespace and
-`flat-json.message-key` policy must match the current adopted source scope.
-Keys remain exact and case-sensitive; decoded Unicode, empty strings, quoted
-UTF-8 ranges, complete file bytes and entry order are preserved. An empty object
-retains a complete zero-entry proposal; no project unit or revision is invented.
-The independently invoked `flat-json.translation-semantics` checker reparses the
-whole original file and verifies language, keys, values, display evidence, ranges
-and coverage without calling extraction. Core owns current-source matching,
-unmatched rows, selection conflicts, per-entry adoption and uncertain outcomes.
-The wire language confirmation is evidence and grants no execution or adoption.
-
-Only captured inputs are requested. The worker never opens source/output paths,
-installs packages, performs network requests or obtains project write handles.
-Native execution still has operating-system user privileges; approval and
-per-attempt consent belong to the public Host/application, and no OS sandbox is
-claimed. Installation and metadata generation do not grant execution authority.
+The worker requests only `captured-input` permissions and performs all parsing and building in memory without touching the filesystem or network.
 
 ## Build and package
 
-Use Rust 1.98 or newer and Python 3.11 or newer on Unix, from this repository root:
+Requires Rust 1.98+ and Python 3.11+ on Unix. From the repository root:
 
 ```sh
 python3 tooling/prepare-sdk.py
@@ -84,17 +31,6 @@ python3 tooling/package-flat-json.py .generated/flat-json-metadata.json \
 tsumugi-plugin-package inspect artifacts/candidates/flat-json
 ```
 
-With a prepared dependency cache, Cargo accepts `--offline`. When sharing a
-custom Cargo target, supply its actual worker path. For distributable binaries,
-use Cargo/Rust's path-remapping options for the checkout and dependency cache.
-`package-flat-json.py` copies explicit prebuilt bytes through the existing public
-packager and executes no binary or build script. It refuses an existing output;
-the package includes the exact SDK lock and both licenses. The inspector is
-the public Host's read-only capture tool, not a publisher authentication or
-installation/permission decision. Build the binary for the actual target OS/CPU.
+When Cargo dependencies are already cached locally, `cargo test` and `cargo build` accept `--offline`. Make sure to compile `flat-json-worker` for the target OS/CPU architecture and rebuild whenever `sdk.lock.json` advances (Process-3 Hosts reject earlier Process-1/2 worker binaries).
 
-Tests use synthetic catalogs and independent literal expected output, including
-Unicode, escaped literals, duplicates, forged coverage, bounded failures and
-cancellation. Actual package/Host/Core acceptance is recorded separately;
-these domain tests do not establish GUI, Windows, Linux execution or release
-acceptance, and do not replace either existing domain's migration.
+`package-flat-json.py` assembles the generated metadata, prebuilt worker binary, `sdk/lock.json`, and license files into a new output directory without running build scripts, and `tsumugi-plugin-package inspect` validates and fingerprints the resulting package.

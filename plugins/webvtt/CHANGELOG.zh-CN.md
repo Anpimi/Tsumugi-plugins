@@ -1,48 +1,29 @@
 # 更新记录
 
-本文件是本插件英文 `CHANGELOG.md` 的中文镜像。
-本独立插件采用语义化版本，首个包为实验版本。
+本文件是英文 [`CHANGELOG.md`](CHANGELOG.md) 的简体中文镜像。
+本插件采用语义化版本（`0.1.0-alpha.1` 为首个实验预发布版本）。
 
 ## [Unreleased]
 
 ## [0.1.0-alpha.1] - 2026-10-23
 
-首个[未签名实验归档](https://github.com/Anpimi/Tsumugi-plugins/releases/tag/webvtt/v0.1.0-alpha.1)，发布日期采用 UTC。
-构建源码为 `d0e8c826ef099cceeab059c7aed5370034296c54`；仅支持 macOS aarch64 上的
-准确实验 Host `e0d223f9bcbbca9decad63d62a90aed8510f9cf0`，minimum=current。
-本次发布不建立 TUF 信任，也不自动选择应用随附插件。
-
-### Changed
-
-- 通过公共 `contributions` 与 `register(id, handler)` API 登记准确能力集合；
-  setup／退出使用 Process-3 组件身份，默认 Project 作用域及领域行为保持不变。
+首个[未签名实验归档](https://github.com/Anpimi/Tsumugi-plugins/releases/tag/webvtt/v0.1.0-alpha.1)（发布时间采用 UTC），基于源码 commit `d0e8c826ef099cceeab059c7aed5370034296c54` 构建，面向 macOS aarch64 上的实验 Host `e0d223f9bcbbca9decad63d62a90aed8510f9cf0`（`minimum = current`）。
 
 ### 新增
 
-- 从明确确认语言的 WebVTT 已译字幕文件导入，保留原始字节与 cue 身份。
-  独立必需检查通过后，由 Core 逐条采纳为候选或所选修订；不修改源时间轴
-  或创建人工批准，仍遵循原字幕语法与规模限制。
-
-- 每条 cue 增加带原始 UTF-8 范围的提取时间事实。独立源检查器拒绝缺失或伪造的事实；纯文本字幕 profile 不推断说话者、角色或场景。修订身份仍采用语义 cue 依据；仅修改 NOTE、换行或 cue 位置不会使未变的 cue 过期。
-
-- 源配方改用 schema/behavior 2/2，并必须引用准确且不可变的 `review-profile` Resource。消费者须使用新固定的 SDK；旧实验配方拒绝，不做转换。源与 Review 数据契约及 alpha.1 插件版本保持不变。
-
-- 新增必需审阅 Resource 与所选文本 QA 能力，通过 SDK CheckResults 检查固定源证据和准确规则版本。缺译文只允许明确捕获的不适用依据，源检查继续执行；Core 人工批准、术语、回退、豁免和发布资格仍由应用负责。
-
-- 包内 SDK 源导入资源，在提取前固定必需材料、字幕 profile、独立提取/检查贡献及必需修订和检查策略。
-
-- 通过 SDK 检查要求与结果执行不可豁免的固定源语义检查；使用独立源 JSON 预期，拒绝伪造覆盖、范围、身份、显示依据、领域块与检查策略。
-- JavaScript SDK 组件：捕获 WebVTT 源提取、按字节范围构建本地化字幕、独立检查实际产物字节。
-- 字幕 profile 1：显式 ASCII cue 身份、时间与设置，以及 BOM、换行、NOTE、STYLE、REGION 和全部非 payload 字节保留。
-- SDK 构建/检查契约与带版本的身份依据 schema；有界输入和结果；可恢复领域错误；公开源码来源与固定字节预期、拒绝样本。
+- 支持从已确认目标语言的 `translations/<canonical-locale>.vtt` 导入现有译文字幕（`import-translations`），保留原始字节与 cue 身份，并提供独立的整文件译文语义检查（`translation-semantic-check`）。
+- 为每条 cue 提取带原始 UTF-8 字节范围的 `time` 源上下文事实，并由独立源检查器核验；语义修订依据仍采用 `webvtt.cue-basis/1`，仅修改 `NOTE`、换行符或字节偏移不会使未变 cue 的修订失效。
+- 源导入 Resource 升级为 schema/behavior `2/2`，并绑定同包不可变的 `review-profile` Resource。
+- 新增 `review-profile` Resource 与所选文本 QA 检查能力（`review-check`，含 `webvtt.source-structure` 与 `webvtt.payload` 规则），基于 SDK `ReviewCheckInput` 与 `CheckResults` 执行校验。
+- 新增包内 `source-profile` 源导入资源，在提取前声明输入材料、字幕 profile、提取与检查贡献以及修订策略。
+- 新增不可豁免的固定源语义检查（`source-semantic-check`）及独立 JSON 预期样本，校验完整覆盖范围、字节区间、cue 身份、显示证据与依据块。
+- 提供 WebVTT 源提取（`extract-source`）、按字节范围替换的本地化构建（`build`）及独立产物字节检查（`validate-artifact`）JavaScript 组件。
+- 实现 `webvtt-captions/1` profile：支持显式 ASCII cue ID、时间轴与设置解析，并在构建时完整保留 BOM、换行符、`NOTE`、`STYLE`、`REGION` 等全部非 payload 字节。
+- 提供带版本的 `cue-basis` schema、可恢复领域错误、源码来源说明（`PROVENANCE.md`）以及固定字节预期与拒绝测试样本。
 
 ### 变更
 
-- 从选定的公共 Process-3 SDK 快照准备 SDK helper 与包来源，并使用匹配的
-  Process-3 Host；字幕／领域契约和同一 alpha.1 包版本保持不变。
-
-- 构建改为消费 SDK BuildInput 并返回 ArtifactSet；捕获的 BuildDeclaration 使独立构建器和检查器可被发现，产物检查返回必需 CheckResults，语义错误继续阻止采纳。拒绝过去实验专用构建/检查 JSON，不做转换；字幕限制和字节保真承诺不变。
-
-- 提取结果采用 content-exchange schema 2 / behavior 1，提供原 cue ID 显示值与 UTF-8 字节范围。拒绝过去开发结果形状；调用方必须使用同一独立选择的 SDK 产物。
-
-此插件归档发布不表示完整应用迁移已经完成。
+- 组件入口切换至 Process 3 的公共 `contributions` 与 `register(id, handler)` API，初始化与退出使用 Process 3 组件身份，保持默认 `Project` 作用域。
+- 基于锁定的 Process 3 SDK 快照准备 SDK 辅助文件与包来源元数据。
+- 构建与产物检查改为使用通用 SDK 的 `BuildInput`、`ArtifactSet`、`BuildDeclaration` 与 `CheckResults` 契约，移除早期专用构建/检查 schema。
+- 源提取结果升级为 `tsumugi.content-exchange` schema 2 / behavior 1，包含原始 cue ID 显示值及 UTF-8 字节范围。

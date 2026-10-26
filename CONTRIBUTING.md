@@ -1,62 +1,35 @@
 # Contributing
 
-For the end-to-end development sequence, use Tsumugi's public
-[plugin authoring walkthrough](https://github.com/Anpimi/Tsumugi/blob/e0d223f9bcbbca9decad63d62a90aed8510f9cf0/docs/plugin-authoring.md)
-with a matching experimental Host/SDK snapshot. This repository's
-[SDK preparation](README.md#build-the-independent-sdk-consumer),
-[Rust example](examples/flat-json/README.md#build-and-package) and
-[JavaScript package](plugins/webvtt/README.md) provide the independent producer
-steps. Their domain and packaging checks do not start the desktop application or
-prove a complete runtime compatibility matrix.
+For an end-to-end walkthrough of authoring, packaging, inspecting, and loading a plugin into Tsumugi, start with Tsumugi's [plugin authoring walkthrough](https://github.com/Anpimi/Tsumugi/blob/e0d223f9bcbbca9decad63d62a90aed8510f9cf0/docs/plugin-authoring.md) using a matching Host and SDK snapshot. Within this repository, see:
 
-For the repository-wide package flow, including the prepared-cache `--offline`
-option, see the [candidate build workflow](README.md#build-and-check-all-independent-candidates).
+- [SDK preparation](README.md#build-the-independent-sdk-consumer)
+- [Rust JSON example build](examples/flat-json/README.md#build-and-package)
+- [WebVTT JavaScript plugin](plugins/webvtt/README.md)
+- [Repository-wide candidate build](README.md#build-and-check-all-independent-candidates) (including the `--offline` flag for pre-populated caches)
 
-## Source and maintenance responsibilities
+## Repository scope and package ownership
 
-Third-party developers may develop and host plugins independently; their source
-does not need to move into this repository. Keep each package's source
-repository, publisher, origin of the package bytes and maintenance owner clear.
-This is the official source and maintenance repository for the packages it owns.
-Registry metadata supports package discovery; a Market can provide search and
-display over that metadata. A listing does not make a package officially maintained or security
-audited, and this repository does not promise to host a Registry or Market.
+This repository is the official source and maintenance home for the plugins and examples it contains (`webvtt`, `stardew-smapi`, `philosophy`, and `flat-json`). Third-party plugin authors can develop and host plugins in their own repositories without upstreaming them here.
 
-Before installing, verify the package's source and publisher and complete the
-consuming application's current trust and permission checks for those exact
-package bytes. A Registry or Market listing is not approval to install or
-execute a package.
-For publication through a signed offline repository, use the matching Host
-snapshot's [signed repository flow](https://github.com/Anpimi/Tsumugi/blob/e0d223f9bcbbca9decad63d62a90aed8510f9cf0/crates/plugin-host/README.md#signed-offline-repositories);
-this source-build workflow and package discovery do not replace that flow.
+When maintaining or porting packages:
 
-Keep domain behavior and tests in the owning plugin directory. Preserve the
-logical IDs `stardew-smapi` and `webvtt` when moving existing implementations.
-Before copying or porting an existing implementation, record its original public
-source paths and source commit, plus the first import commit, in package
-provenance; retain applicable licenses and notices.
+- Keep each plugin's source repository, publisher, provenance, and maintenance owner clear. Registry metadata or Market listings help users discover packages, and offline signed distribution follows Tsumugi's [signed repository flow](https://github.com/Anpimi/Tsumugi/blob/e0d223f9bcbbca9decad63d62a90aed8510f9cf0/crates/plugin-host/README.md#signed-offline-repositories).
+- Keep domain logic and tests inside the owning package directory, and preserve the logical plugin IDs `stardew-smapi` and `webvtt`.
+- When porting code from an existing public implementation, record the original repository, source paths, source commit, and initial import commit in `PROVENANCE.md`, and preserve all license notices.
 
-Consume only the pinned public SDK and public conformance tools. Do not import
-Core, ProjectStore, desktop state, or private project documents. Protocol changes
-belong in [Tsumugi](https://github.com/Anpimi/Tsumugi), then arrive here through a
-verified SDK artifact. A local SDK override is a development choice, not a
-release dependency or a replacement for the pinned artifact.
+## SDK consumption and boundaries
 
-Each plugin uses its own SemVer and changelog. A shared-tool change must exercise
-all affected packages. The SDK probe verifies declaration and captured-source
-contract consumption. Domain tests use independent expected bytes; Host pairing
-must consume the actual prebuilt package with independently approved fingerprints,
-not load a source tree or infer a grant from installation. Neither probe nor domain
-tests establish an accepted desktop workflow.
+- **Consume only the pinned public SDK**: Plugins and examples depend strictly on the verified SDK archive selected by `sdk.lock.json` and public conformance tools. Do not import Tsumugi Core, `ProjectStore`, or desktop application internals.
+- **Upstream contract changes first**: Protocol and contract updates belong in [Tsumugi](https://github.com/Anpimi/Tsumugi) and arrive here as a new immutable `.crate` archive under `artifacts/sdk/<producer-commit>/`. Retain earlier SDK archives for provenance and never hand-edit generated SDK files or cached artifacts.
+- **No install-time code execution**: Package runtime files using `tooling/package-plugin.py` and an explicit `package-files.json` recipe. Do not add lifecycle install scripts, runtime source compilation, or silent fallbacks between plugins.
+- **Keep test data clean**: Never commit credentials, personal project data, or build output directories (`artifacts/candidates/`, `.cache/`, `.generated/`).
 
-Run `python3 -m unittest discover -s tooling/tests` for public preparation and
-packaging checks. Package runtime files through `tooling/package-plugin.py` and
-the explicit `package-files.json` recipe. Generated SDK helpers must come from the
-selected verified archive with their licenses and lock, never a hand-edited copy.
-Retain older SDK archives and pin replacements by producer commit. Keep candidate
-build directories out of Git; each domain keeps its initial `0.1.0-alpha.1` version
-until an actual release boundary requires a version decision.
+## Versioning and verification
 
-Do not add installation scripts, automatic source builds at runtime or silent
-fallback to a different plugin. Keep credentials, user project data and internal
-workspace information out of source, fixtures, logs and artifacts.
+Each plugin manages its own SemVer version and `CHANGELOG.md` (with `CHANGELOG.zh-CN.md` mirroring the English entries). Packages remain at `0.1.0-alpha.1` while in the initial experimental batch.
+
+When modifying shared tooling or SDK selection, run the checks across all affected packages:
+
+- Run `python3 -m unittest discover -s tooling/tests` to verify SDK preparation, packaging, compatibility, and release scripts.
+- Run `tsumugi-sdk-probe` and the domain test suites (`cargo test --locked` and `node --test`) against independent expected fixtures.
+- When testing Host integration, always inspect and load the prebuilt package directory produced by the packager rather than pointing the Host at a working source tree.

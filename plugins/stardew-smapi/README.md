@@ -1,20 +1,10 @@
 # SMAPI flat translation package
 
-The entrypoint uses the current Process3 SDK facade: `api.instance`, the frozen
-`api.contributions` roster, and `api.register(contributionId, handler)`. It
-registers exactly the members selected by the Host, with no singleton API
-fallback. Callable components retain their declared **Project** scope; adapting
-the entrypoint does not enable an Application instance or authorize additional
-operations. Use the current paired SDK and Host artifacts; older Process2
-runtime captures cannot execute this facade.
-
-Experimental independent package `org.tsumugi/stardew-smapi` `0.1.0-alpha.1`.
-It consumes the pinned public SDK and runs through the same JavaScript component
-Host as other packages. No Core, project database, Mod DLL or game is loaded.
+`org.tsumugi/stardew-smapi` (`0.1.0-alpha.1`) is a standalone JavaScript plugin package for Stardew Valley SMAPI `smapi-i18n-flat/1` translation packs. It consumes the pinned public Tsumugi SDK and runs in the Process 3 JavaScript Host (`api.instance`, `api.contributions`, and `api.register(contributionId, handler)` at **Project** scope) without loading Core, a project database, mod DLLs, or the game runtime.
 
 ## Build and test
 
-Use Node `>=26.10.0 <27`, pnpm 12.8.1 and Python 3.11 or newer. From the repository:
+Requires Node `>=26.10.0 <27`, pnpm 12.8.1, and Python 3.11+. From the repository root:
 
 ```sh
 python3 tooling/prepare-sdk.py
@@ -26,114 +16,36 @@ python3 tooling/package-plugin.py plugins/stardew-smapi artifacts/candidates/sta
 tsumugi-plugin-package inspect artifacts/candidates/stardew-smapi-0.1.0-alpha.1
 ```
 
-The package recipe retains generated SDK validators, exact SDK provenance,
-`jsonc-parser` runtime files and licenses. Prepared dependencies are ordinary
-files and differing prepared files are refused. Export uses the shared packaging
-owner's bounded, link-refusing capture. No package installation script runs.
-A prebuilt package does not need pnpm, Python, a developer checkout or external
-`node_modules`; its selected Host/runtime is independently approved and captured.
-Inspection and installation do not grant worker execution or project adoption.
+`pnpm --dir plugins/stardew-smapi build` stages the locked `jsonc-parser` runtime files, SDK-generated validators, and license notices as ordinary files so the prebuilt package runs without `node_modules`, pnpm, or lifecycle scripts.
 
-## Supported candidate profile
+## Supported `smapi-i18n-flat/1` profile
 
-`smapi-i18n-flat/1` receives exactly `manifest.json` (companion, at most 16 KiB)
-and `i18n/default.json` (source, at most 128 KiB), with explicitly supplied source
-language and exact artifact hashes. UTF-8 text may have one leading BOM; JSON
-comments and trailing commas are allowed. Single quotes, loose property names,
-missing commas, duplicate properties including ASCII case conflicts, nesting
-beyond sixteen levels, non-string flat values and empty source objects are
-refused. The complete manifest is retained, not executed. Printable ASCII native
-keys and UniqueID retain the preceding limits; Unicode values and empty values
-are preserved. `$schema` is retained in raw source, without becoming a text unit.
-At most 2000 entries and 16 KiB per decoded text are admitted.
-Extraction adds one snapshot-level source context `note` containing the actual
-manifest `Name`, referenced by its original quoted UTF-8 byte range. The separate
-source checker reparses the manifest and rejects omitted, forged or additional
-facts. Keys and namespace supply native identity only; they do not imply a
-speaker, role, scene or character. The fact is encoded with the pinned SDK helper,
-staged for source-tree tests by `prepare-sdk.py` and packaged from that artifact.
-One separate snapshot `smapi.manifest-context-basis/1` block records the decoded
-Name without a source coordinate. It is the only selected context revision basis;
-the fact retains the precise source reference for inspection and checking.
-Manifest whitespace can move the fact's range without invalidating revisions;
-a changed Name changes the semantic basis. The canonical basis payload is
-`{"version":1,"name":"..."}` as described by the packaged
-[schema](schemas/manifest-context-basis.schema.json).
-If `Name` exceeds the SDK fact's 4096-byte text limit, extraction still retains
-the complete source and omits both context blocks. Omission means unavailable
-context, not an empty observation; the checker rejects a partial or invented
-replacement fact or revision basis.
+### Source extraction and checking
 
-Every native key remains an independent unit, with actual quoted token ranges in
-original UTF-8 bytes and `smapi-native-key/1` identity evidence. No sharing or
-rename/continuation is inferred from equal text. Source semantic checking reparses
-fixed files and inspects complete coverage, text, identity and ranges. A manifest
-version template emits `source-template`, a warning that installed Mod
-compatibility was not verified.
+Source extraction accepts two verified artifacts—`manifest.json` (companion, up to 16 KiB) and `i18n/default.json` (source, up to 128 KiB)—along with the source language:
 
-`build` consumes SDK BuildInput with empty configuration, complete fixed target
-revisions and one explicit safe `i18n/<locale>.json` path matching the target's
-base language. Project metadata owns registered/supported locales; this package
-also checks well-formed canonical spelling using the fixed Node runtime's ICU.
-It returns one translation artifact, at most 1 MiB, with canonical
-ordered JSON and its exact digest. New JSON output has no source formatting or
-comment preservation promise. The separately invoked artifact checker reparses
-actual strict JSON, checks every ordered key/value and canonical token boundary,
-and compares named marker inventories and control-character restrictions. It
-never uses the builder's output as its expected oracle. Fixed independent
-`smapi.artifact-conformance` evidence remains mandatory.
+- **JSONC syntax and limits**: Allows an optional leading UTF-8 BOM, line/block comments, and trailing commas. Single-quoted strings, unquoted property names, missing commas, duplicate keys (including ASCII case-insensitive collisions), objects nested deeper than 16 levels, non-string flat values, and empty `default.json` objects are rejected.
+- **Keys and entries**: Accepts up to 2,000 entries and 16 KiB per decoded string. Native keys and `UniqueID` must be printable ASCII; Unicode string values and empty strings (`""`) are preserved. `$schema` is kept in the raw source artifact without becoming a translatable unit. Each key forms an independent unit (`smapi-native-key/1`) with original quoted UTF-8 byte ranges.
+- **Manifest context note and revision basis**: When the manifest's `Name` fits within the SDK's 4,096-byte fact limit, extraction emits a snapshot-level `note` fact referencing the quoted `Name`'s UTF-8 byte range, plus a coordinate-free `smapi.manifest-context-basis/1` revision block (`{"version":1,"name":"..."}`, defined in [`schemas/manifest-context-basis.schema.json`](schemas/manifest-context-basis.schema.json)). Because only the coordinate-free basis block participates in revision hashing, whitespace edits in `manifest.json` do not invalidate revisions, whereas changing `Name` does. If `Name` exceeds 4,096 bytes, both blocks are omitted so the source still imports cleanly.
+- **Independent source checking**: `source-semantic-check` reparses `manifest.json` and `i18n/default.json` to verify every unit, text, native key, byte range, and context block. If `manifest.json` uses a version template placeholder (such as `%ProjectVersion%`), the checker emits a `source-template` warning.
 
-`import-translations` consumes SDK TranslationExtractionInput for one complete
-captured `i18n/<locale>.json`, at most 128 KiB, with the current source set/snapshot,
-explicit project target and fixed native namespace/policy. The domain validates
-canonical filename spelling and matching base language, retains the filename's
-declared language separately, and never creates a project language. Registered
-language membership, current adopted source and actual user confirmation belong
-to the application; the `user-confirmed` wire value is evidence, not a grant.
-`default.json`, nested paths, duplicate keys, invalid text and over-limit files
-are refused. Empty objects retain a complete zero-entry proposal; empty strings
-remain actual values. The proposal keeps original artifacts, native spellings,
-quoted UTF-8 references and complete entry order without allocating project units
-or revisions. The separately invoked `translation-semantic-check` reparses the
-original whole file and verifies all values, keys, references, scope and coverage
-under the mandatory `smapi.translation-semantics` rule. Completed check coverage
-with an error finding still blocks adoption.
+### Locale building and artifact checking
 
-## Integration boundary
+- `build` consumes SDK `BuildInput` (empty configuration, complete decided target texts, and a safe `i18n/<locale>.json` path whose canonical BCP 47 tag shares the target's base language) and outputs a single canonical, sorted JSON artifact (up to 1 MiB) with its SHA-256 digest. Source comments and custom whitespace are not carried over into built JSON files.
+- `validate-artifact` independently parses the generated strict JSON output and verifies key ordering, values, token boundaries, named placeholder inventories, and control-character rules under the mandatory `smapi.artifact-conformance` requirement.
 
-The `source-profile`, `translation-profile` and `build-profile` resources use
-SDK-owned declarations. Six contributions perform source extraction/checking,
-complete translation extraction/checking and locale building/artifact checking.
-The domain supplies translation data and filename evidence; application locale
-confirmation, current-project matching, candidates/conflicts, per-entry adoption
-and uncertain-outcome recovery remain application/Core integration work.
-Discovery outside the exact declared
-materials, source-update project adoption and final production cutover remain
-application integration work. This candidate does not complete SMAPI migration
-or claim a release, Windows runtime support, OS isolation or game compatibility.
+### Existing translation import
 
-## Domain review checks
+- `import-translations` consumes `TranslationExtractionInput` for a single `i18n/<locale>.json` file (up to 128 KiB) paired with the current source snapshot and a `user-confirmed` project target language. It rejects `default.json`, nested paths, duplicate keys, invalid syntax, and oversized files. An empty JSON object (`{}`) yields a valid zero-entry proposal, while empty strings (`""`) are preserved as translated values.
+- `translation-semantic-check` reparses the translation file from scratch under the mandatory `smapi.translation-semantics` rule to verify all keys, values, UTF-8 ranges, and scope before Core matches entries against the project.
 
-The source-import Resource uses schema/behavior 2/2 and names this package's
-exact `review-profile` as `reviewResource`. Applications capture that selection
-with the source; reading metadata grants no checker execution or approval.
+## Domain review checks and integration boundary
 
-The `review-profile` Resource declares the exact `review-check` capability and
-mandatory rule versions. Its SDK ReviewCheckInput retains complete original
-source evidence plus an explicit selected unit/revision/text scope. This checker
-runs separately from source extraction and checking actual built artifacts.
-It returns SDK CheckResults with exact captured keys, digests and target coverage.
-Missing selected text needs an explicitly captured N/A basis for a rule that
-depends on translation; source-only rules still run. Missing requirements, wrong
-versions/providers and out-of-scope selections refuse success.
+The `source-profile` Resource (schema/behavior `2/2`), `translation-profile` Resource, `build-profile` Resource, and `review-profile` Resource declare all six format contributions plus the `review-check` capability using standard SDK contracts.
 
-The package contributes `smapi.placeholders` (named marker names/counts) and
-`smapi.format` (marker syntax, source fidelity and unsupported control characters).
-Malformed marker inventories remain unavailable and format findings block.
+`review-profile` runs standalone QA checks on `ReviewCheckInput` (original source evidence plus selected unit/revision/text entries) and provides two mandatory rules:
 
-Core independently fixes its mandatory rules and owns manual approval, empty
-selected-translation policy, terminology, source-fallback decisions, waivers and
-release eligibility. Plugin checks cannot replace those rules or approve a
-release. Actual Core/Desktop Review integration remains in development. This
-remains the same unpublished plugin `0.1.0-alpha.1` batch, without a release or
-historical development-format migration.
+- `smapi.placeholders`: Verifies that named `{{placeholder}}` token names and counts match between source and translation.
+- `smapi.format`: Validates placeholder syntax, source fidelity, and control-character restrictions.
+
+Missing translations require an explicit `missing-translation` N/A basis on translation-dependent rules, while source-only rules still execute. Host package inspection, runtime approval, locale confirmation, project unit matching, per-entry adoption, and release gating are handled by the host application and Tsumugi Core.

@@ -6,31 +6,18 @@
 
 ## [0.1.0-alpha.1] - 2026-10-23
 
-首个[未签名实验归档](https://github.com/Anpimi/Tsumugi-plugins/releases/tag/stardew-smapi/v0.1.0-alpha.1)，发布日期采用 UTC。
-构建源码为 `d0e8c826ef099cceeab059c7aed5370034296c54`；仅支持 macOS aarch64 上的
-准确实验 Host `e0d223f9bcbbca9decad63d62a90aed8510f9cf0`，minimum=current。
-本次发布不建立 TUF 信任，也不自动选择应用随附插件。
+首个[未签名实验归档](https://github.com/Anpimi/Tsumugi-plugins/releases/tag/stardew-smapi/v0.1.0-alpha.1)（发布时间采用 UTC），基于源码 commit `d0e8c826ef099cceeab059c7aed5370034296c54` 构建，面向 macOS aarch64 上的实验 Host `e0d223f9bcbbca9decad63d62a90aed8510f9cf0`（`minimum = current`）。
 
-### Changed
+### 新增
 
-- 通过公共 `contributions` 与 `register(id, handler)` API 登记准确能力集合；
-  setup／退出使用 Process-3 组件身份，默认 Project 作用域及领域行为保持不变。
+- 源提取在 `manifest.json` 的 `Name` 符合 SDK 事实长度上限（4,096 字节）时，附带带原始引号字节范围的快照级 `note` 上下文事实，并提供不含坐标的 `smapi.manifest-context-basis/1` 修订依据块（使仅修改 manifest 空白位置不会触发修订变更，而修改 `Name` 会更新修订）。
+- 源导入 Resource 升级为 schema/behavior `2/2`，并绑定同包不可变的 `review-profile` Resource。
+- 新增 `review-profile` Resource 与所选文本 QA 检查能力（`review-check`，含 `smapi.placeholders` 与 `smapi.format` 规则），基于 SDK `ReviewCheckInput` 与 `CheckResults` 执行校验。
+- 实现独立 JavaScript `smapi-i18n-flat/1` 源提取（`extract-source`）与独立源语义检查（`source-semantic-check`），支持 JSONC 与 BOM 解析、原生 key 身份及原始 UTF-8 字节范围。
+- 支持基于通用 SDK 的语言包构建（`build`）与独立严格产物检查（`validate-artifact`），随包携带锁定的 `jsonc-parser` 运行时依赖、SDK 校验器及相关许可证。
+- 支持 `i18n/<locale>.json` 现有译文提取（`import-translations`）与整文件译文语义检查（`translation-semantic-check`），严格区分空对象（`{}`）与空字符串值（`""`）。
 
 ### 变更
 
-- 从选定的公共 Process-3 SDK 快照准备 SDK helper 与包来源，并使用匹配的
-  Process-3 Host；SMAPI／领域契约和同一 alpha.1 包版本保持不变。
-
-### Added
-
-- 源提取现在把 manifest 中真实的 `Name` 作为带来源范围的快照说明，前提是其符合 SDK 事实长度上限。超长名称仍保留原源导入，标记为上下文不可用；独立检查器拒绝遗漏、截断和臆造的角色或说话者。另以不含坐标的名称依据判断修订变化：名称变化会使修订变化，仅空白位置变化不会。
-
-- 源配方改用 schema/behavior 2/2，并必须引用准确且不可变的 `review-profile` Resource。消费者须使用新固定的 SDK；旧实验配方拒绝，不做转换。源与 Review 数据契约及 alpha.1 插件版本保持不变。
-
-- 新增必需审阅 Resource 与所选文本 QA 能力，通过 SDK CheckResults 检查固定源证据和准确规则版本。缺译文只允许明确捕获的不适用依据，源检查继续执行；Core 人工批准、术语、回退、豁免和发布资格仍由应用负责。
-
-- 独立 JavaScript SMAPI 平铺 profile 提取带原生 key 和原字节范围依据的源内容，并单独检查完整提案。固定 parser 保留 JSONC 与 BOM 处理，并明确拒绝超限或不支持的输入。
-- 通用 SDK 语言构建和独立严格产物检查保留完整固定目标覆盖、规范键值输出与命名变量规则。包包含带许可证的锁定 JSONC 依赖和公开 SDK 校验器。
-- 完整已有译文提取保留当前源快照、已确认目标、原始材料与原生 key 引用。单独的必需 checker 检查完整提案；空对象与空值保持不同语义，不支持的文件名、重复键及超限均拒绝成功。
-
-项目匹配、逐条采纳与完整桌面迁移仍在开发中。
+- 组件入口切换至 Process 3 的公共 `contributions` 与 `register(id, handler)` API，初始化与退出使用 Process 3 组件身份，保持默认 `Project` 作用域。
+- 基于锁定的 Process 3 SDK 快照准备 SDK 辅助文件与包来源元数据。

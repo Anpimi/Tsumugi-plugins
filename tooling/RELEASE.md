@@ -1,53 +1,23 @@
 # Review and publish one experimental plugin
 
-`release-plugin.py` separates fixed-byte review from an explicitly authorized
-GitHub publication. It consumes the existing independent build, public Host
-archive inspector and compatibility-matrix evidence. It does not rebuild a
-plugin, execute its Worker, create SDK artifacts, install anything, enroll a
-publisher, access signing keys, or select bundled plugins.
+`tooling/release-plugin.py` prepares and publishes unsigned experimental plugin archives (`webvtt` or `stardew-smapi`) as independent GitHub prereleases (`latest=false`).
 
-The only supported publication is an **unsigned experimental development
-archive**, marked as a GitHub prerelease and never selected as the latest
-release. It is not a TUF-authenticated repository or production signing flow.
-Installation approval, runtime approval and per-attempt execution remain
-separate application decisions.
+The release workflow is split into two distinct phases:
 
-Each invocation selects one WebVTT or SMAPI package with its own prerelease
-version. Tags are independent: `webvtt/v0.1.0-alpha.1` and
-`stardew-smapi/v0.1.0-alpha.1`, for example. This does not establish a shared
-repository version or require an unchanged plugin to be published again.
+1. **`prepare` (offline review bundle)**: Verifies a completed candidate build report, package archive, Host inspector binary, and compatibility matrix reports, then writes a self-contained review directory and prints its `release-plan.json` SHA-256 digest.
+2. **`publish` (dry-run by default, `--execute` to publish)**: Verifies the prepared directory against the reviewed plan digest and, when `--execute` is passed by an authorized operator, creates the GitHub prerelease, uploads the assets, verifies their downloaded bytes, and publishes the tag.
 
-## Trust and execution boundary
+Each plugin is released under its own tag namespace (for example, `webvtt/v0.1.0-alpha.1` and `stardew-smapi/v0.1.0-alpha.1`). Releasing one plugin does not require republishing unchanged plugins.
 
-Run preparation without publication credentials. Use an explicitly reviewed
-Host inspector binary and its SHA-256. Preparation captures that binary into a
-disposable directory and sends the captured tar bytes to `inspect-archive`.
-It runs neither the original binary path after capture nor any package member.
-The inspector is not included in the prepared release.
+## Security and operational boundaries
 
-The publisher must run from a trusted, reviewed copy of this tooling and its
-existing capture helpers. Do not check out an unreviewed pull request in a
-privileged job. Do not run package scripts, builds or an inspector in the
-credential-bearing publication step. Existing PR workflows remain read-only;
-they do not automatically trigger publication or receive publication secrets.
-Run publication only after the operator has permission to create this exact
-tag and release. A JSON `reviewed` field or CLI flag cannot grant account
-authorization by itself.
+- **No build or worker execution during release**: `release-plugin.py` never rebuilds packages, runs package lifecycle scripts, or executes plugin Workers. During `prepare`, it copies the approved `tsumugi-plugin-package` binary into a temporary directory and runs `inspect-archive` on the `.tar` file; during `publish`, it does not run the inspector at all.
+- **Run from a trusted checkout**: Always run `release-plugin.py` from a reviewed commit of this repository. CI pull-request workflows remain read-only and never receive publication tokens.
+- **Caller declarations**: The script checks consistency across the build report, compatibility reports, SDK lock, and archive digests, while the operator is responsible for reviewing the source commit, CI provenance, and public availability of the declared Host commit.
 
-The tool verifies agreement between fixed artifacts and reviewed reports. It
-does not independently authenticate source compilation, CI report authorship,
-the inspector's declared source commit or the declaration of a public support
-endpoint. The operator must verify those origins and public availability as
-part of review. A source commit is not inferred from a PR head: a hosted PR
-merge checkout can be a different commit and must retain its actual identity.
+## 1. Prepare a reviewed selection
 
-## Prepare a reviewed selection
-
-Requires the same Unix, Python and ordinary-file capture support as the existing
-packagers. Preparation needs no GitHub connection. Supply one selection JSON;
-all filesystem paths are relative to that file, unless explicitly absolute.
-The following is a schema example, not execution evidence. Replace every
-placeholder with a reviewed actual value:
+Create a selection JSON file (paths are resolved relative to the selection file unless absolute). Replace all angle-bracket placeholders below with actual reviewed values:
 
 ```json
 {
@@ -94,10 +64,9 @@ placeholder with a reviewed actual value:
 }
 ```
 
-`sdkArtifact` must contain the **complete unchanged SDK lock object**, including
-any additional fields present in the real lock. The abbreviated example does
-not authorize dropping them. The build report, relevant compatibility selections
-and admitted package's `sdk/lock.json` must agree on that whole object.
+Note: `sdkArtifact` in a real selection file must be the **complete JSON object** from `sdk.lock.json` (including `formatVersion`, `package`, `sourceRepository`, `license`, and `publishedToCratesIo`), matching the build report, compatibility reports, and packaged `sdk/lock.json`.
+
+Run `prepare` to create a new review directory:
 
 ```sh
 python3 tooling/release-plugin.py prepare \
@@ -105,79 +74,29 @@ python3 tooling/release-plugin.py prepare \
   --output review/prepared-webvtt
 ```
 
-Use a new output directory beneath an existing ordinary parent. Existing output,
-symlink/hard-link inputs and changed captured files are refused using the
-existing packaging owner. Failed attempts are not recursively removed.
+### What `prepare` verifies
 
-Preparation requires a passed clean-source independent build with effective
-Python, Rust and Node test execution, exactly one matching package, the exact
-tar SHA-256, a matching Host inspection, and the complete captured SDK lock.
-The Host owns `packageDigest`; tar SHA-256 is a distinct transport identity.
-Host inspection does not authorize installation or execution.
+- **Clean candidate build**: `candidate-build.json` must be from a clean checkout (`sourceDirty: false`) with passing Python, Rust, and Node test suites, matching `archiveSha256`, `packageDigest`, and `sdk/lock.json`.
+- **Compatibility matrix evidence**: `compatibilityReports` must provide passing `two-domain-core-adoption-v1` journeys for both `paired-candidates` and `candidate-plugins-declared-host` against the exact source commit, package digest, SDK lock, and declared macOS aarch64 Host (`minimumIsCurrent: true`).
+- **First-publication bootstrap**: Before an initial public release exists for a protocol baseline, `candidate-host-released-plugins` cannot run against published URLs. Providing a reviewed `bootstrap` object allows publishing the initial prerelease while `candidate-host-released-plugins` is `not-run` (matrix status `incomplete`). Once published release archives exist and all three matrix classes pass, set `"bootstrap": null` (`release-plugin.py` rejects a bootstrap waiver if released-plugin evidence is already present).
 
-Compatibility evidence must be actual `two-domain-core-adoption-v1` matrix
-reports. At least one `paired-candidates` and one
-`candidate-plugins-declared-host` row must have passed for this exact source,
-selected package, SDK and supported Host. Each original Host report must show
-both named domain journeys executing exactly once successfully, the verified
-normal Core consumer, a clean Host before and after, and an approved runtime
-descriptor that matches the independent runtime inspection. Runtime platform
-comes from that descriptor, not from the package build machine.
+### Contents of the prepared directory
 
-This initial release policy supports one exact experimental Host endpoint:
-minimum equals current, macOS aarch64 only. Other platforms' successful source
-builds do not expand runtime support. The endpoint must be publicly obtainable
-at that exact commit before the operator authorizes publication.
+`prepare` writes the following files into the output directory and prints the SHA-256 digest of `release-plan.json`:
 
-## First-publication bootstrap
+- `<plugin>-<version>.tar` (exact copy of the original archive bytes)
+- `release-plan.json` (binds all uploaded asset filenames, sizes, and SHA-256 digests)
+- `sdk-lock.json` and `inspection.json`
+- `compatibility.json` and `build-summary.json` (sanitized summaries without local paths, raw command lines, logs, or binaries)
+- `release-notes.md`
 
-Before the first public package exists, the candidate-Host × released-plugin
-class cannot have real released-artifact evidence. Keep its original status
-`not-run` and the original matrix status `incomplete`.
+Record the printed `release-plan.json` SHA-256 digest outside the prepared directory before proceeding to publication.
 
-An explicitly reviewed `bootstrap` reason permits preparation and publication
-of this limited unsigned prerelease only. The paired and declared-Host classes
-must still have actual passed results. No other missing or failed class can be
-waived. Reports from separate actual matrix runs can supply those two classes;
-their original summaries are checked and never rewritten to `passed`.
+## 2. Dry-run and publish
 
-After publication, download the real fixed release assets and use their exact
-HTTPS URLs and tar digests in a new released-plugin compatibility selection.
-Only that later executed result can satisfy the released-plugin class. Once
-all three classes have passed, use `"bootstrap": null`; the release tool rejects
-a bootstrap waiver when released-plugin evidence is already present.
+`publish` uses the official `gh` CLI via direct `argv` calls targeting `github.com/Anpimi/Tsumugi-plugins` (ignoring `GH_HOST` overrides).
 
-## Review the prepared bytes
-
-The new directory contains exactly:
-
-- One original `<plugin>-<version>.tar`, with no repacking or byte substitution.
-- `release-plan.json`, binding the complete uploaded asset set by SHA-256/size.
-- `sdk-lock.json` and `inspection.json`.
-- `compatibility.json`, retaining identities, effective counts and limitations.
-- `build-summary.json` and `release-notes.md`.
-
-The summaries omit raw command lines, local checkout/package/runtime paths,
-logs and inspector executables. Review all public text, selected SDK metadata
-and the bootstrap reason before approval. The plan digest printed by preparation
-identifies the precise review object; retain that value outside the mutable
-prepared directory.
-
-Before publication, the publisher recaptures and verifies that plan and every
-listed asset. It does not enumerate arbitrary files or execute an inspector.
-Changing a prepared asset or the plan invalidates approval; prepare and review
-a new result instead of substituting bytes under an existing version/tag.
-
-## Dry-run and explicitly authorized publication
-
-Use a trusted installed official `gh` CLI for real publication. This tool calls
-it with argv arrays; it never constructs shell commands or implements another
-GitHub client. API calls explicitly select `github.com`, and release commands
-use `github.com/Anpimi/Tsumugi-plugins`; `GH_HOST` cannot redirect this target.
-Configure account credentials independently, outside build/PR
-jobs. The command does not print or package those credentials.
-
-Publication is a local dry-run unless `--execute` is present:
+First, run a local dry-run (the default when `--execute` is omitted), which re-verifies all prepared assets and writes a receipt without invoking `gh` or touching the network:
 
 ```sh
 python3 tooling/release-plugin.py publish \
@@ -186,9 +105,7 @@ python3 tooling/release-plugin.py publish \
   --output review/publication-dry-run
 ```
 
-The dry-run validates and captures the assets into a new attempt directory and
-writes a receipt without invoking `gh` or accessing an account. Only after
-explicit authorization for this exact reviewed plan, run:
+Once authorized to publish the reviewed plan, run with `--execute`:
 
 ```sh
 python3 tooling/release-plugin.py publish \
@@ -198,66 +115,29 @@ python3 tooling/release-plugin.py publish \
   --execute
 ```
 
-The fixed remote sequence is:
+When `--execute` is passed, `release-plugin.py` performs the following remote steps:
 
-1. Read the exact source commit from the official plugin repository; reject any
-   existing same-name tag or release, including drafts. The official GraphQL
-   lookup resolves a draft's database ID even before a Git tag exists; subsequent
-   REST reads bind that exact ID. Authentication/read failures do not count as absence.
-2. Create a draft prerelease with the exact source target and `latest=false`.
-3. Upload only the captured reviewed assets without overwrite flags.
-4. Download every asset from that draft and compare its exact bytes with the
-   reviewed capture. Reject unexpected, missing or incomplete assets.
-5. Recheck an existing tag's exact commit, publish the prerelease, then confirm
-   release identity, unchanged asset identities and the final tag's commit.
+1. Verifies that `sourceCommit` exists on `github.com/Anpimi/Tsumugi-plugins` and confirms that no tag or release (including drafts, checked via GraphQL and REST) already exists for `<id>/v<version>`.
+2. Creates a draft prerelease targeting `sourceCommit` with `latest=false`.
+3. Uploads the reviewed assets from the captured attempt directory without overwrite flags.
+4. Downloads every uploaded asset from the draft release and verifies that its size and SHA-256 match `release-plan.json`.
+5. Publishes the prerelease and verifies the final release metadata, asset digests, and tag commit.
 
-Keep this tag's publication exclusive to the trusted operator. GitHub does not
-provide this script a transaction spanning concurrent release edits. The script
-detects observed conflicts and retains uncertainty; it does not claim release
-immutability or prevent another authorized maintainer from later changing a
-mutable release. It never silently replaces or removes such changes.
+## Failure handling and recovery
 
-## Failure and recovery
+Each `publish` invocation writes `events.jsonl`, `receipt.json`, and a captured upload directory under `--output`. Receipt statuses are:
 
-Every publication attempt retains `events.jsonl`, `receipt.json` and its captured
-upload directory. Remote mutations are journaled as `outcome-unknown` before
-execution. A failed or timed-out command receives only a read-only reconciliation
-attempt; the receipt records observed release/asset identities and any unavailable
-read. A command that timed out may already have created the draft, uploaded an
-asset or published the release.
+- `dry-run`: Local verification succeeded; no remote calls were made.
+- `blocked`: A precondition failed before any remote mutation occurred.
+- `outcome-unknown`: A remote mutation was started (recorded before execution in `events.jsonl`) and failed or timed out before final verification completed. The script performs a read-only reconciliation check and records the observed GitHub state in `receipt.json`.
+- `published`: All upload, readback, and final tag checks succeeded.
 
-`dry-run` means no remote operation occurred. `blocked` means a pre-publication
-condition failed. `outcome-unknown` means a mutation was attempted without a fully
-confirmed final publication. `published` requires the final readback checks.
-An interrupted process may leave only its durable event journal; reconcile those
-events with GitHub before deciding what happened.
+If an attempt ends in `outcome-unknown`, inspect `receipt.json` and the GitHub release state before retrying. Standard `publish` runs refuse existing tags or drafts. If the previous attempt only created an **empty draft prerelease** (zero uploaded assets and no Git tag), you can resume from that draft in a new output directory using `--recover-empty-draft <database-id>` together with `--expected-plan-sha256` and `--execute`.
 
-Do not blindly rerun an uncertain attempt. Ordinary publication refuses existing
-remote tags/releases, even when they resemble a previous attempt. Inspect the
-retained receipt and current remote state before deciding a manual recovery.
-There is no automatic resume, asset replacement, deletion, tag rewrite or
-rollback operation. One narrow manual recovery is available after read-only
-reconciliation: explicitly select `--recover-empty-draft <database-id>` with
-the same reviewed plan digest and `--execute`, using a new attempt directory.
-The exact draft ID, tag, target commit and prerelease identity must match; the
-draft must have **zero assets and no Git tag**. This skips creation and continues
-the original capture/upload/readback sequence without replacing anything.
-An existing asset, tag or published release refuses this recovery. Preserve the
-first attempt and keep the exact continuation within the operator's authorization;
-the recovery flag itself cannot grant account permission.
-
-A discovered post-publication mismatch remains an observed
-published-state problem and is not disguised as a successful rollback.
-
-## Focused verification
+## Running the release tool tests
 
 ```sh
 python3 -m unittest discover -s tooling/tests -p test_release_plugin.py -v
 ```
 
-The suite uses synthetic prebuilt data, an isolated inspector-protocol fixture
-and a recording GitHub CLI state model. It checks review admission, changed
-bytes, exact argv, draft/readback/publication ordering, conflicts, and uncertain
-outcomes without a network or real account. It does not prove a real Host
-inspection, hosted compatibility run or actual GitHub publication passed;
-those require their separate fixed-artifact evidence.
+This unit test suite exercises selection validation, byte-change detection, `gh` command construction, draft/upload/readback sequencing, conflict handling, and `--recover-empty-draft` using synthetic fixtures and a mock `gh` state model.

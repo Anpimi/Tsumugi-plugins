@@ -1,106 +1,31 @@
 # Pinned SDK consumer artifact
 
-The selected `.crate` is an immutable source package produced by
-[`tsumugi-plugin-sdk` in Tsumugi](https://github.com/Anpimi/Tsumugi),
-version `0.1.0-alpha.1`, under its declared MIT license. `sdk.lock.json` records
-its SHA-256, producer repository and exact source commit. The source commit is a
-development candidate; the SDK is experimental and has not been published to
-crates.io. This included archive makes its public code and harness available
-without a sibling checkout or an unpublished Git dependency.
+This directory stores immutable `.crate` source archives of `tsumugi-plugin-sdk` (`0.1.0-alpha.1`, MIT-licensed), produced from the [Tsumugi repository](https://github.com/Anpimi/Tsumugi). Because the experimental SDK is not published to `crates.io`, checking the archive into this repository lets plugins and examples build self-contained without a sibling Tsumugi checkout or unpublished Git dependencies.
 
-Tsumugi remains the sole contract owner. Do not change files inside this archive
-or introduce hand-written copies of its types. Generate a replacement in the
-producer repository and independently verify its bytes and public contents before
-updating the lock. This repository releases domain plugins separately from SDK
-and application versions. Third-party registry dependencies are fetched through
-Cargo with the checked-in lockfile; their source is not included in this archive.
+## Archive management and provenance
 
-New development snapshots use `<producer-commit>/<package>-<version>.crate`.
-Earlier archives remain unchanged for provenance; `sdk.lock.json` selects exactly
-one snapshot and there is no compatibility fallback. Preparation hashes and
-extracts the same captured archive bytes, verifies an existing cache, and refuses
-unmatched files. The current snapshot includes the Rust source-extraction API,
-generated JavaScript content declarations, standalone extraction and source-check
-validators, original identity display evidence and fixed check-selection contracts,
-with their license notices. Packaged plugins derive those helpers from this artifact.
+- **Single source of truth**: Tsumugi owns all SDK contracts, schemas, and generated validators. Never modify files inside an archive or maintain hand-written copies of SDK types in plugin directories.
+- **Immutable snapshots**: Each SDK snapshot is stored at `artifacts/sdk/<producer-commit>/<package>-<version>.crate`. Earlier archives are kept intact for provenance.
+- **Exact selection**: [`sdk.lock.json`](../../sdk.lock.json) pins the active archive's path, SHA-256 digest, producer repository, and source commit. `tooling/prepare-sdk.py` verifies the archive digest, extracts its contents into `.cache/sdk/`, verifies existing cache files and executable flags, and stages generated JavaScript helpers and license notices for packaging. Third-party Rust dependencies are fetched separately via Cargo using the committed `Cargo.lock`.
 
-The selected snapshot also supplies the SDK-owned source-import resource types,
-strict receiver and generated schema. A package resource fixes material and
-independent provider/check policy, while directory and current execution authority
-remain application-owned. The added resource stays in this same unreleased
-experimental package batch and does not establish a completed desktop migration.
+## Capabilities in the current SDK snapshot
 
-The current selected snapshot also includes generic BuildInput/ArtifactSet,
-ArtifactCheckInput/CheckResults, BuildDeclaration and BuildError, with generated
-JavaScript build declarations and standalone structural validators. The plugin
-uses these public contracts while retaining its own caption semantics.
+The active `0.1.0-alpha.1` snapshot uses **process protocol 3** (`manifestVersion: 1`) and provides both the Rust API and generated JavaScript declarations/standalone validators for:
 
-The selected producer also includes complete existing-translation input/proposal,
-independent required-check input and single-file Resource contracts. It supplies
-Rust strict receivers and generated JavaScript declarations/structural validators.
-SMAPI consumes these shapes without importing project state. The new snapshot
-stays within the same undistributed SDK alpha.1 batch; current-source matching,
-actual consent and adoption remain application responsibilities.
-
-The selected review snapshot includes ReviewCheckInput, ReviewDeclaration/Binding
-and finite ReviewCheckError data, with generated JavaScript review types and
-structural validators. Its exact producer commit and archive SHA-256 are retained
-in sdk.lock.json; prior development archives remain unchanged. Plugins contribute
-mandatory domain rules through these contracts, while Core still owns review
-policy, approval, terminology, explicit fallback, waivers and qualification.
-These additions stay in the same unpublished SDK alpha.1 batch.
-
-Source-import Resources now use schema/behavior 2/2 and require a named immutable
-Review Resource. Binding accepts the captured Review declaration and fixes all
-source and Review providers from one package/profile. The precise producer
-commit and archive digest are selected in `sdk.lock.json`; earlier archives and
-their verified caches remain preserved. This is the same unpublished SDK
-alpha.1 batch, with no historical recipe conversion.
-
-The selected snapshot also provides the optional Rust `native-worker` entry
-point. It owns framing, invocation identity, cooperative cancellation and
-component disposal; a plugin implements the SDK's `NativeComponent` rather
-than another transport. Default SDK features remain data-only. Its separate
-Native application Host environment profile carries no artificial Node
-artifacts and grants no installation or execution permission. This remains
-the same unpublished SDK alpha.1 batch. Runtime approval, real package/channel
-binding and project adoption belong to the public Host and application.
-
-The selected tool snapshot adds the SDK's strict read-only capability selector,
-exact profile and same-package Resource/Skill references, with generated schemas,
-JavaScript types and a standalone structural validator. Philosophy preparation
-uses that validator from the verified artifact. Actual captured-package binding,
-current component availability and per-attempt authority remain Host/application
-responsibilities; tool guidance cannot grant them.
-
-The current source selection includes process protocol 3 and its SDK-owned
-service descriptors. Basic Native components use the same protocol with an empty
-service table; the Native helper rejects nonempty services before activation.
-Rebuild a prebuilt Native worker from this selected archive and recapture its
-package for a Process-3 Host. Process-1/2 workers and environment descriptions are
-refused unchanged. Manifest/content-exchange versions, domain profile contracts,
-and the same undistributed SDK alpha.1 batch remain unchanged. No old-runtime
-fallback, historical migration or release is implied.
-
-The selected snapshot adds the SDK-owned bounded work-plan generation-service
-input, child-identity receipt and finite errors at schema/behavior `1/1`, plus
-exact declared text-query payload preparation. The data contracts grant no
-execution authority and do not change the separate process protocol. The producer commit
-and immutable archive digest are recorded in `sdk.lock.json`; prior archives
-remain unchanged. Actual application adapters, current consent and cumulative
-budgets remain application responsibilities. This remains the same unpublished
-SDK `0.1.0-alpha.1` batch.
-
-The selected Process-3 artifact freezes a bounded component capability roster
-and a component instance principal separately from each invocation provider.
-JavaScript setup uses `contributions` and `register(id, handler)`; the Native
-facade rejects a multi-member activation before calling author code. These
-contracts grant no execution permission and do not widen default Project scopes.
-
-The selected producer-qualified snapshot includes the separate bounded
-`generation-component-input` wrapper and its SDK-generated JavaScript validator.
-Philosophy explicitly consumes it to complete one prepared terminology lookup
-before submitting an unchanged Core generation request. The lock fixes the exact
-producer and archive; earlier archives remain intact. Process3, manifest1 and the
-same undistributed SDK `0.1.0-alpha.1` version remain unchanged. Neither the data
-wrapper nor archive selection grants tool or model execution authority.
+- **Process 3 component runtime and Native worker**:
+  - Freezes a component capability roster (`contributions`) and separates the component instance principal from per-invocation providers.
+  - JavaScript components register handlers via `api.register(id, handler)` while retaining their declared scope (`Project` by default, or `Attempt` for generation delegates).
+  - The optional Rust `native-worker` feature provides framing, invocation identity, cooperative cancellation, and disposal through the `NativeComponent` trait (with an empty service table and singleton component activation). Prebuilt Native workers must be compiled against this Process-3 SDK; earlier Process-1/2 binaries and environment descriptors are rejected.
+- **Source extraction and source-import resources**:
+  - Rust and JavaScript contracts for `SourceExtractionInput`, `ContentExchange` (schema 2 / behavior 1), original identity display evidence, source-context facts, and standalone extraction/source-check validators.
+  - Source-import Resource declarations at schema/behavior `2/2`, requiring a same-package immutable `reviewResource` reference and fixing source and review providers per profile.
+- **Existing-translation import**:
+  - Contracts and validators for `TranslationExtractionInput`, `TranslationExchange`, `TranslationImportDeclaration`, and whole-file translation semantic checking.
+- **Generic locale build and artifact checking**:
+  - `BuildInput`, `ArtifactSet`, `ArtifactCheckInput`, `CheckResults`, `BuildDeclaration`, and `BuildError`, along with standalone JavaScript structural validators.
+- **Domain review and text review**:
+  - `ReviewCheckInput`, `ReviewDeclaration` / `ReviewBinding`, and `ReviewCheckError` for mandatory domain review rules (`webvtt` and `stardew-smapi`).
+  - `tsumugi.text-review-input` (`1/1`) and `tsumugi.text-review-report` (`1/1`) for advisory concept checks (`philosophy`).
+- **Capability tools, text queries, and work-plan generation**:
+  - Read-only capability tool selector (`tsumugi.capability-tool-declaration` `1/1`) with profile, Resource, and Skill references, plus `createToolQuery` payload preparation helpers.
+  - Work-plan generation service data contracts (`1/1` input, child-identity receipt, and finite errors) and the `generation-component-input` (`1/1`) wrapper that pairs a prepared terminology query with a Core generation request.

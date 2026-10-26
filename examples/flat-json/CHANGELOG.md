@@ -1,24 +1,16 @@
 # Changelog
 
-All notable changes to this experimental example are recorded here.
+All notable changes to this example package are recorded here.
 
 ## [Unreleased]
 
-### Changed
-
-- The public Native facade rejects multi-member activation before author code
-  runs; this package continues to use its original singleton profile.
-
-- Rebuild the prebuilt Native worker from the selected public Process-3 SDK.
-  Earlier Process-1/2 binaries are refused; the flat catalog profile and same
-  undistributed alpha.1 version are unchanged, with no runtime fallback.
-
 ### Added
 
-- Captured existing-translation extraction and independent complete-file
-  semantic checking with exact native keys, locale evidence and empty-file
-  preservation. Core retains source matching and per-entry adoption ownership.
-- SDK-only Rust message-catalog extraction, independent source/QA/artifact
-  checking and locale building for the current `flat-json-messages` 1/1 profile.
-- Typed generation of manifest/resources and explicit prebuilt packaging with
-  pinned SDK provenance. No package or application release is implied.
+- Existing-translation extraction and independent whole-file semantic checking (`flat-json.translation-semantics`) with exact native keys, locale validation, and empty-object (`{}`) support.
+- Native Rust `flat-json-messages` (`1/1`) source extraction, independent source/QA/artifact checking, and locale building built purely on the public Tsumugi SDK.
+- Single-source typed Rust generation of the plugin manifest and declarative Resources, packaged via `tooling/package-flat-json.py` with pinned SDK provenance.
+
+### Changed
+
+- Updated the Native worker to reject multi-member activation in the SDK facade before author code runs, keeping the example's singleton component profile.
+- Rebuilt the Native worker against the pinned Process 3 SDK snapshot (Process-1/2 worker binaries are rejected by Process-3 Hosts).

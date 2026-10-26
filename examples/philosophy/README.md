@@ -1,162 +1,46 @@
 # Philosophy terminology example
 
-The entrypoint uses the current Process3 SDK facade: `api.instance`, the frozen
-`api.contributions` roster, and `api.register(contributionId, handler)`. It
-registers exactly the members selected by the Host, with no singleton API
-fallback. The knowledge callables retain their declared **Project** scope;
-the separate generation delegate has **Attempt** scope. These declarations do
-not enable an Application worker or authorize additional operations. Use the
-current paired SDK and Host artifacts; older Process2
-runtime captures cannot execute this facade.
+`org.tsumugi.examples/philosophy` (`0.1.0-alpha.1`) is a format-independent JavaScript knowledge and terminology example built against the pinned public Tsumugi SDK (`sdk.lock.json`). Rather than parsing a document format, it packages an MIT-licensed editorial glossary (`en` source terms with `zh-CN` and `ja` preferred translations) together with deterministic lookup, advisory text-review checks, an Agent tool selector and UI view, and an optional generation delegate.
 
-An independent knowledge package with the identity
-`org.tsumugi.examples/philosophy`, version `0.1.0-alpha.1`. It consumes the pinned
-public SDK Component facade. It has no Core, desktop or private-workspace
-dependency and does not own a file format. Its original MIT-licensed terminology
-resource defines editorial preferences, rather than claiming to be an
-authoritative philosophical dictionary.
+Its entrypoints use the Process 3 SDK facade (`api.instance`, `api.contributions`, and `api.register(contributionId, handler)`): the knowledge callables (`query` and `check`) run at **Project** scope, while the generation delegate runs at **Attempt** scope.
 
-The `query` and `check` contributions use the same captured terminology engine.
-The supported source locale is `en`; targets are `zh-CN` and `ja`. Matching uses
-case-sensitive Unicode word boundaries in source English and literal preferred
-target forms. A spelling alone does not select a sense.
+## Terminology lookup (`query`) and advisory review (`check`)
 
-`query` keeps its original 1/1 input, output and error contracts. It requires the
-resource's exact ID, revision and SHA-256, an explicit target locale and explicit
-concept IDs. Empty lookups retain the full corpus/query basis.
+Both `query` and `check` share the same in-memory terminology engine (`en` → `zh-CN` / `ja`), matching English source terms on case-sensitive Unicode word boundaries and checking target text for literal preferred translations. Because a surface word like "sound" can be unrelated to deductive soundness, matching a word never automatically selects a philosophical sense without an explicit concept ID or rule selection.
 
-`org.tsumugi.examples.philosophy-check` is now capability **2/2** and accepts the
-public SDK `tsumugi.text-review-input` 1/1, emits
-`tsumugi.text-review-report` 1/1 and uses `tsumugi.review-check-error` 1/1. Its
-generated `text-review` Resource at `resources/text-review.json` declares an
-advisory checker with four rules, one per original concept:
-`org.tsumugi.examples.philosophy-term.{validity,soundness,premise,inference}`.
-Rule titles and explanations come from the same terminology resource.
+- **`query` (schema/behavior `1/1`)**: Requires the terminology resource's exact ID, revision, and SHA-256, a target locale (`zh-CN` or `ja`), and an explicit list of concept IDs. Empty matches still return the full corpus and query basis.
+- **`check` (`org.tsumugi.examples.philosophy-check`, schema/behavior `2/2`)**: Consumes SDK `tsumugi.text-review-input` (`1/1`), returns `tsumugi.text-review-report` (`1/1`), and uses `tsumugi.review-check-error` (`1/1`). The generated `resources/text-review.json` Resource declares four non-mandatory, non-waivable advisory rules—one per concept:
+  - `org.tsumugi.examples.philosophy-term.validity`
+  - `org.tsumugi.examples.philosophy-term.soundness`
+  - `org.tsumugi.examples.philosophy-term.premise`
+  - `org.tsumugi.examples.philosophy-term.inference`
+- **Review behavior**: Each `check` call specifies a non-empty subset of rules and verifies the Host provider and `terminology` Resource SHA-256 pin. When a source unit contains a concept term and its translation omits the preferred target form, the checker returns a warning diagnostic with the UTF-16 translation range, usage note, suggested form, and glossary entry. If a relevant unit has no translation, the rule reports `unavailable` across the requested scope unless all selected units are untranslated and the requirement carries the `missing-translation` N/A basis. All findings are advisory editorial suggestions rather than release-blocking errors.
 
-Each invocation explicitly selects a nonempty rule subset in its requirements;
-the selection applies to that invocation only. Every requirement remains
-nonmandatory and nonwaivable, has the exact provider, rule version, captured
-input/scope digests and complete selected unit coverage. Input selections retain
-the supplied unit ID, source revision, source text and nullable translation.
-The `terminology` Resource pin uses its contribution ID, schema and exact byte
-SHA-256. The component compares the requirement provider to the Host's read-only
-invocation provider; the Host separately checks actual package Resource bytes,
-request association and execution channel. Payload claims do not establish
-authority.
+## Capability tool, Skill, and host-rendered UI (`reference-query`)
 
-The report contains one outcome for every requested rule and typed diagnostics
-for its actual findings. Preferred-term suggestions are warnings with the exact
-unit, UTF-16 translation range, usage note, suggested form and original Resource
-entry. Irrelevant concepts complete with no findings. A rule whose relevant text
-has a missing translation is unavailable for its full requested scope, unless
-all selected translations are missing and that requirement already carries the
-allowed `missing-translation` NA basis. Mixed present/missing scope cannot invent
-NA. Failed or unavailable outcomes do not become passed checks.
-
-These resources and findings remain **unadopted editorial suggestions**. Selecting
-a check does not adopt project terminology, make it a required blocker, approve
-a translation or create current project QA. Core QA composition and adoption are
-separate integration work; this package does not claim those paths are complete.
-
-Resources and deterministic functions need no model or Agent runtime. The
-`agent-query-tool` resource describes an adapter to the original `query`
-contribution through the SDK's `tsumugi.capability-tool-declaration` 1/1 contract,
-with its exact profile, terminology Resource and Skill. Its input/output/error
-schemas, limits and permissions come from the original capability. The declared
-Skill explains its use without granting tools. The prepare command uses the
-verified SDK's generated structural validator; actual Host binding separately
-checks package references and bounded semantic constraints.
-The tool's optional public `query` presentation is generated from the same
-terminology file: its exact pin, original schema references, explicit concept
-options, target languages and reference columns. The SDK's shared
-`createToolQuery` helper constructs original single or batch inputs, retains
-Unicode and scope, and displays typed reference entries or empty results.
-It does not execute a component, adopt a term or infer a sense from spelling.
-The original worker still verifies the exact resource and domain input.
-Application editor, batch and Agent tool discovery/invocation are separate
-integration work. This package does not claim that those product journeys or an
-AI execution loop have been accepted merely because metadata is present.
-
-## Host-rendered reference query
-
-The `reference-query` Ui contribution belongs to the original `knowledge`
-component and selects its unique `agent-query-tool` Resource with exact
-`tsumugi.capability-tool-declaration` schema/behavior `1/1`. A matching Desktop
-renders the existing reference-query controls. The Host refuses a missing or
-ambiguous same-component Resource, an unsupported slot/schema or a tool pointing
-to another component. Resources, checks, this Ui and generation retain one package
-installation identity. The terminology Resource and Skill remain data-only.
-
-Displaying the controls runs no worker and supplies no permission. Queries retain
-the original runtime review, independent execution consent and Core ledger; output
-remains an unadopted reference. Disablement, replacement or uninstall removes the
-old view without erasing the original query draft or uncertain-action recovery.
-Installed same-version snapshots are never replaced automatically: review the new
-package bytes separately within this undistributed alpha.1 batch.
+- **Tool declaration (`agent-query-tool`)**: Generated using the SDK's `tsumugi.capability-tool-declaration` (`1/1`) contract, binding the read-only `query` capability, the `terminology` Resource pin, and the [`skills/concept-review.md`](skills/concept-review.md) Skill. It also defines a structured `query` presentation (concept options, target locales, and reference result columns) used by the SDK's `createToolQuery` helper to build single or batch lookup payloads.
+- **Host-rendered UI (`reference-query`)**: Declared on the `knowledge` component and linked to `agent-query-tool` (`tsumugi.capability-tool-declaration` `1/1`) so Tsumugi Desktop can render reference lookup controls directly from the package metadata without running a custom frontend bundle.
 
 <a id="generation-service-client"></a>
 
 ## Optional generation service client
 
-The package's independent Attempt JavaScript `generation` component at
-`components/generation.mjs` explicitly consumes the public SDK's
-`tsumugi.generation-component-input` **1/1** wrapper. Its `generation-delegate`
-capability advances its own schema/behavior contract to **2/2** for this changed
-input and query prerequisite; Core receipt and finite error schemas stay **1/1**.
-This replaces its earlier generation-only input: use a matching Host and prepare
-one terminology query through the work plan before starting the component.
+`components/generation.mjs` is an independent **Attempt**-scoped JavaScript component implementing `generation-delegate` (schema/behavior `2/2`). It consumes the SDK's `tsumugi.generation-component-input` (`1/1`) wrapper, which pairs a prepared terminology query with a Core WorkPlan generation request.
 
-The component declares separate required single-provider dependencies and
-`project-service` permissions for the original Core WorkPlan generation service
-and the original Philosophy query contract. The read-only knowledge component,
-its captured-input permissions, domain algorithms, Resources and Skill remain
-available without starting generation. Installation or package approval supplies
-neither the component grant nor the work plan's independent query consent.
+### Execution flow
 
-The Host freezes one selected query's complete payload, handle, call identity and
-original tool binding. The component checks the captured facade and SDK wrapper,
-executes that exact query once, and checks the original domain result's corpus,
-languages, query basis and selected concepts. Empty matches are valid. Query
-failure reports component `failed/unavailable`; an unknown query reports
-`unknown/outcome-unknown`. Both stop before a new Core call. The original query
-ledger retains its own result. Transport rejection stays an error, without a
-retry or a fabricated acknowledgement; cancellation prevents further calls.
+1. **Dependencies and permissions**: Declares required single-provider dependencies and `project-service` permissions for both the Core WorkPlan generation service and the package's `query` capability. The read-only `knowledge` component remains usable even when generation permissions are not granted.
+2. **Prerequisite terminology lookup**: Before calling Core generation, the delegate executes the Host-frozen terminology query once and validates its corpus, locales, query basis, and requested concepts. Empty matches succeed; if the query fails (`failed/unavailable`) or returns an unknown outcome (`unknown/outcome-unknown`), the delegate stops immediately without invoking Core generation.
+3. **Core generation submission**: After the query succeeds, the delegate forwards the unchanged child `taskId`, `attemptId`, and `unitIds` subset to the Core WorkPlan generation service once, without altering model prompts or injecting terminology into the request. It returns Core's `1/1` child receipt or finite error verbatim. Note that a generation receipt confirms that Core queued the child task; subsequent model or credential outcomes are tracked on that child task in project history.
 
-Only after a successful query does the delegate call the original Core generation
-service once with the unchanged fixed child `taskId`, `attemptId` and distinct
-`unitIds` subset. The wrapper is bounded to **1 MiB**, while that original child
-request remains bounded to **16 KiB** and **100 units**. The delegate preserves
-the actual Core service's success, failure or unknown receipt/error bytes within
-**1 KiB**. A query result is an unadopted reference: this composition gates child
-submission on completing the selected lookup. It does not inject terminology or
-reference text into the model prompt. The original Core configuration, sharing
-decision, model destination, cumulative budget and human controls remain the
-authority; the client provides no credentials, grants or model override.
+### Payload budgets
 
-Facades use A's exact outer attempt. The query component B retains its own
-execution scope and independent grant; the descriptor is not B's execution
-identity. Original SDK-generated validators and tool-query helpers come from the
-selected immutable producer-qualified archive and package recipe, with their
-license and lock. This package introduces no protocol codec, executor, model
-adapter or retry mechanism.
-
-A generation receipt acknowledges original child admission, rather than model
-completion or adoption. Inspect the original child task in application history.
-Missing required services are refused before activation. A later model or
-credential failure belongs to an already recorded child. Unknown transport does
-not prove enqueueing had no effect, and cancellation does not roll back a child
-already accepted by Core. Reopening reads history without restoring execution
-permission or replacing a captured query or shared Application instance.
-
-Node tests use synthetic facade responses; real prebuilt-package/Host/Core
-pairing requires separate evidence. This remains the same undistributed
-`0.1.0-alpha.1` batch. New input, dependency and package bytes need explicit review;
-an installed same-version snapshot is not automatically replaced or given the
-additional service permission.
+- **Knowledge `query` / `check`**: Inputs up to 64 KiB (max 100 records, 8 KiB per text) and outputs up to 64 KiB. Oversized reports fail without truncation.
+- **Generation delegate**: Wrapper input up to 1 MiB, Core child request up to 16 KiB (max 100 units), and receipt/error response up to 1 KiB.
 
 ## Prepare and inspect
 
-Use Node `>=26.10.0 <27` and Python 3.11 or newer. From the repository root:
+Requires Node `>=26.10.0 <27` and Python 3.11+. From the repository root:
 
 ```sh
 python3 tooling/prepare-sdk.py
@@ -167,30 +51,4 @@ python3 tooling/package-plugin.py examples/philosophy artifacts/candidates/philo
 tsumugi-plugin-package inspect artifacts/candidates/philosophy
 ```
 
-One public definition generates the three-component manifest, tool selector and
-text-review declaration, retaining the original terminology resource and a
-separate generation definition. Preparation stages the verified SDK's generated
-text-review and generation input/receipt/error validators into the ignored `sdk/` directory
-for source tests, using the same `sdkFiles` recipe as packaging. The existing
-public packager copies only the explicit recipe and the verified SDK license and
-lock; it executes no installation scripts. The application Host captures the
-actual complete package and separately approved Node/Host environment before
-running its components. Installed resources and Skill bytes can be read from
-that captured package without executing code. Inspection supplies no publisher
-authentication, execution grant, model credential or resource adoption.
-
-Knowledge inputs are bounded to 64 KiB, 100 records and 8 KiB per text. Their
-outputs are bounded to 64 KiB. Unsupported locales, unknown or duplicate concepts, mismatched
-resource pins, substituted providers or rules, malformed input and cancellation
-fail explicitly. An oversized complete report is rejected without truncation.
-Never replace a project term or human translation directly with a returned
-preference.
-
-This independently versioned, unreleased development example adds no application
-version, format migration or dependency. Its initial alpha version remains
-unchanged until a release boundary requires a new version decision.
-The earlier development-only package-specific tool descriptor is replaced by
-the explicit public SDK selector; no fallback or historical migration is supplied.
-The earlier custom `check` input/output contracts are replaced by the public
-text-review contracts, with no compatibility fallback. The query contracts and
-resource adoption boundary remain unchanged.
+`examples/philosophy/tooling/prepare.mjs` generates the three-component manifest, `agent-query-tool`, and `text-review` Resource declarations from a single definition and stages the pinned SDK's structural validators into the ignored `sdk/` directory for unit tests. `package-plugin.py` packages the explicit file recipe, SDK validators, license, and `sdk/lock.json` into `artifacts/candidates/philosophy`.
